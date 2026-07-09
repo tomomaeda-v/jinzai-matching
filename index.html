@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>外国人材マッチング管理</title>
+<title>外国人材マッチング管理</title><!-- v2 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --navy:#1e3a5f; --teal:#0e7c7b; --bg:#f4f6f9; --card:#fff; --line:#e2e8f0;
@@ -18,6 +19,8 @@ header .sub{font-size:11px;opacity:.75}
 header .spacer{flex:1}
 .hbtn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px}
 .hbtn:hover{background:rgba(255,255,255,.25)}
+#syncDot{width:9px;height:9px;border-radius:50%;background:#94a3b8;display:inline-block;margin-right:4px}
+#syncDot.on{background:#4ade80}
 nav{background:#fff;border-bottom:1px solid var(--line);padding:0 20px;display:flex;gap:4px;position:sticky;top:46px;z-index:49}
 nav button{border:none;background:none;padding:12px 18px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;font-weight:600}
 nav button.active{color:var(--navy);border-bottom-color:var(--teal)}
@@ -45,7 +48,7 @@ tr:hover td{background:#f8fafc}
 .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600;margin:2px}
 .c-ok{background:#dcfce7;color:#15803d}.c-ng{background:#fee2e2;color:#b91c1c}.c-na{background:#f1f5f9;color:#64748b}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
-select,input[type=text],input[type=number],input[type=date],input[type=email],textarea{
+select,input[type=text],input[type=number],input[type=date],input[type=email],input[type=password],textarea{
   border:1px solid #cbd5e1;border-radius:6px;padding:7px 9px;font-size:13px;font-family:inherit;background:#fff}
 textarea{width:100%;min-height:56px}
 label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:3px}
@@ -74,19 +77,40 @@ label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bot
 .alert.red{border-left-color:var(--ng);background:#fef2f2}
 .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
 .empty{text-align:center;color:var(--muted);padding:30px;font-size:13px}
-.link{color:var(--teal);cursor:pointer;text-decoration:underline;font-weight:600}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:200;display:none}
+#loginOverlay{position:fixed;inset:0;background:var(--bg);z-index:300;display:flex;align-items:center;justify-content:center}
+#loginBox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:34px;width:360px;box-shadow:0 8px 30px rgba(15,23,42,.08)}
+#loginBox h2{color:var(--navy);font-size:18px;margin-bottom:6px}
+#loginBox p{font-size:12px;color:var(--muted);margin-bottom:18px}
+#loginBox input{width:100%;margin-bottom:12px}
+#loginErr{color:var(--ng);font-size:12px;margin-bottom:10px;min-height:16px}
 @media(max-width:700px){nav button{padding:10px 10px;font-size:12px}main{padding:12px}}
 </style>
 </head>
 <body>
+
+<!-- ログイン -->
+<div id="loginOverlay">
+  <div id="loginBox">
+    <h2>外国人材マッチング管理</h2>
+    <p>社内用システムです。配布されたアカウントでログインしてください。</p>
+    <label>メールアドレス</label>
+    <input type="email" id="loginEmail" autocomplete="username">
+    <label>パスワード</label>
+    <input type="password" id="loginPass" autocomplete="current-password">
+    <div id="loginErr"></div>
+    <button class="btn" style="width:100%" onclick="doLogin()">ログイン</button>
+  </div>
+</div>
+
 <header>
-  <div><h1>外国人材マッチング管理</h1><div class="sub">人材・求人プール / ミスマッチ可視化 / 社内運用</div></div>
+  <div><h1>外国人材マッチング管理</h1><div class="sub"><span id="syncDot"></span>リアルタイム共有 / 社内運用</div></div>
   <div class="spacer"></div>
-  <button class="hbtn" onclick="exportJSON()">📤 エクスポート(共有用)</button>
+  <button class="hbtn" onclick="exportJSON()">📤 バックアップ</button>
   <button class="hbtn" onclick="document.getElementById('importFile').click()">📥 インポート</button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
   <button class="hbtn" onclick="loadDemo()">デモデータ</button>
+  <button class="hbtn" onclick="doLogout()">ログアウト</button>
 </header>
 <nav>
   <button id="tab-dash" class="active" onclick="showTab('dash')">📊 ダッシュボード</button>
@@ -199,6 +223,12 @@ label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bot
 <div class="modal-bg" id="jobModal">
   <div class="modal">
     <h3 id="jobModalTitle">求人を登録</h3>
+    <div class="dropzone" id="jobPdfZone" onclick="document.getElementById('jobPdfInput').click()">
+      📄 <b>求人票PDFをここにドロップ / クリックして選択</b><br>
+      <span class="small">施設名・勤務地・月給・必要資格・受入在留資格・夜勤などを自動抽出してフォームに反映します（反映後に必ずご確認ください）</span>
+      <div id="jobPdfStatus" class="small" style="margin-top:6px;font-weight:700"></div>
+    </div>
+    <input type="file" id="jobPdfInput" accept=".pdf" style="display:none" onchange="parseJobPDF(this.files[0])">
     <div class="fgrid">
       <div class="fitem"><label>求人名 *</label><input type="text" id="j_title" style="width:100%"></div>
       <div class="fitem"><label>企業・施設名 *</label><input type="text" id="j_company" style="width:100%"></div>
@@ -226,24 +256,73 @@ label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bot
 <script>
 if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}
 
+// ===== Supabase 設定 =====
+const SUPABASE_URL="https://yfqzmmiughpenrvuaymm.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_MHOfAdgTIU8ITDkpSbPFeA_aJchLFOn";
+let sb=null;
+try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){}
+
 // ===== 定数 =====
 const VISAS=["特定技能1号","特定技能2号","介護","技能実習","永住者","定住者","日本人の配偶者等","永住者の配偶者等","家族滞在","留学","技術・人文知識・国際業務","特定活動(EPA)","その他"];
 const QUALS=["介護福祉士","実務者研修","初任者研修","介護技能評価試験合格","介護日本語評価試験合格","普通自動車免許","看護師(母国)","その他資格"];
 const NATIONS=["ベトナム","フィリピン","インドネシア","ミャンマー","ネパール","中国","韓国","タイ","カンボジア","スリランカ","モンゴル","ブラジル","ペルー","バングラデシュ","インド"];
 const JPLV={"N1":5,"N2":4,"N3":3,"N4":2,"N5":1,"":0};
 
-// ===== データ =====
+// ===== データ（Supabase同期） =====
 let DB={cands:[],jobs:[]};
-const LS_KEY="gm_matching_db_v1";
-function load(){try{const d=localStorage.getItem(LS_KEY);if(d)DB=JSON.parse(d);}catch(e){}}
-function save(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
+async function loadAll(){
+  const [c,j]=await Promise.all([sb.from("gm_cands").select("data"),sb.from("gm_jobs").select("data")]);
+  if(c.error||j.error){toast("データ取得エラー: "+(c.error||j.error).message);return;}
+  DB.cands=c.data.map(r=>r.data);
+  DB.jobs=j.data.map(r=>r.data);
+}
+async function upsertRow(table,obj){
+  const {error}=await sb.from(table).upsert({id:obj.id,data:obj,updated_at:new Date().toISOString()});
+  if(error){toast("保存エラー: "+error.message);return false;}
+  return true;
+}
+async function deleteRow(table,id){
+  const {error}=await sb.from(table).delete().eq("id",id);
+  if(error){toast("削除エラー: "+error.message);return false;}
+  return true;
+}
+let reloadTimer=null;
+function scheduleReload(){
+  clearTimeout(reloadTimer);
+  reloadTimer=setTimeout(async()=>{await loadAll();renderAll();},400);
+}
+function startRealtime(){
+  sb.channel("db-changes")
+    .on("postgres_changes",{event:"*",schema:"public",table:"gm_cands"},scheduleReload)
+    .on("postgres_changes",{event:"*",schema:"public",table:"gm_jobs"},scheduleReload)
+    .subscribe(st=>{document.getElementById("syncDot").classList.toggle("on",st==="SUBSCRIBED");});
+}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function toast(m){const t=document.getElementById("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",2500);}
 
+// ===== 認証 =====
+async function doLogin(){
+  const email=document.getElementById("loginEmail").value.trim();
+  const pass=document.getElementById("loginPass").value;
+  const err=document.getElementById("loginErr");
+  err.textContent="";
+  if(!email||!pass){err.textContent="メールアドレスとパスワードを入力してください";return;}
+  const {error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){err.textContent="ログイン失敗: "+error.message;return;}
+  await enterApp();
+}
+async function doLogout(){await sb.auth.signOut();location.reload();}
+async function enterApp(){
+  document.getElementById("loginOverlay").style.display="none";
+  await loadAll();
+  renderAll();
+  startRealtime();
+}
+document.getElementById("loginPass").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+
 // ===== 初期化 =====
-function init(){
-  load();
+async function init(){
   const fv=document.getElementById("f_visa");
   fv.innerHTML='<option value=""></option>'+VISAS.map(v=>`<option>${v}</option>`).join("");
   document.getElementById("natList").innerHTML=NATIONS.map(n=>`<option value="${n}">`).join("");
@@ -252,12 +331,20 @@ function init(){
   document.getElementById("j_visas").innerHTML=VISAS.map(v=>`<label><input type="checkbox" value="${v}">${v}</label>`).join("");
   document.getElementById("cFilterVisa").innerHTML='<option value="">全在留資格</option>'+VISAS.map(v=>`<option>${v}</option>`).join("");
   document.getElementById("cFilterQual").innerHTML='<option value="">全資格</option>'+QUALS.map(q=>`<option>${q}</option>`).join("");
-  // PDFドロップ
-  const z=document.getElementById("pdfZone");
+  setupDropzone("pdfZone",parsePDF);
+  setupDropzone("jobPdfZone",parseJobPDF);
+  if(!sb||SUPABASE_URL.startsWith("__")){
+    document.getElementById("loginErr").textContent="Supabase未設定です。管理者に連絡してください。";
+    return;
+  }
+  const {data}=await sb.auth.getSession();
+  if(data&&data.session){await enterApp();}
+}
+function setupDropzone(id,handler){
+  const z=document.getElementById(id);
   z.addEventListener("dragover",e=>{e.preventDefault();z.classList.add("drag");});
   z.addEventListener("dragleave",()=>z.classList.remove("drag"));
-  z.addEventListener("drop",e=>{e.preventDefault();z.classList.remove("drag");if(e.dataTransfer.files[0])parsePDF(e.dataTransfer.files[0]);});
-  renderAll();
+  z.addEventListener("drop",e=>{e.preventDefault();z.classList.remove("drag");if(e.dataTransfer.files[0])handler(e.dataTransfer.files[0]);});
 }
 function renderAll(){renderDash();renderCands();renderJobs();refreshMatchTargets();renderMatch();}
 
@@ -272,17 +359,13 @@ function showTab(t){
 // ===== マッチング判定（コア） =====
 function evalMatch(c,j){
   const checks=[];
-  // 在留資格（ハード条件）
   const visaOK=!(j.visas&&j.visas.length)||j.visas.includes(c.visa);
   checks.push({k:"在留資格",ok:visaOK,hard:true,d:`本人: ${c.visa||"未設定"} ／ 受入: ${(j.visas&&j.visas.length)?j.visas.join("・"):"制限なし"}`});
-  // 日本語レベル（ハード条件）
   const jpOK=!j.jpLevel||JPLV[c.jpLevel||""]>=JPLV[j.jpLevel];
   checks.push({k:"日本語",ok:jpOK,hard:true,d:`本人: ${c.jpLevel||"未取得"} ／ 要件: ${j.jpLevel||"不問"}以上`});
-  // 資格
   const req=j.reqQuals||[];
   const missing=req.filter(q=>!(c.quals||[]).includes(q));
   checks.push({k:"資格",ok:missing.length===0,hard:false,d:missing.length?`不足: ${missing.join("・")}`:(req.length?`要件充足（${req.join("・")}）`:"資格不問")});
-  // 勤務地
   let locOK=true,locD="どちらか未設定のため判定対象外";
   if(j.location&&c.desiredLoc){
     const wants=c.desiredLoc.split(/[、,\/・\s]+/).filter(Boolean);
@@ -290,7 +373,6 @@ function evalMatch(c,j){
     locD=`希望: ${c.desiredLoc} ／ 勤務地: ${j.location}`;
   }
   checks.push({k:"勤務地",ok:locOK,hard:false,d:locD});
-  // 給与
   let salOK=true,salD="どちらか未設定のため判定対象外";
   if(c.desiredSalary&&(j.salaryMax||j.salaryMin)){
     const mx=j.salaryMax||j.salaryMin;
@@ -298,7 +380,6 @@ function evalMatch(c,j){
     salD=`希望: ${c.desiredSalary}万円 ／ 提示: ${j.salaryMin||"?"}〜${j.salaryMax||"?"}万円`;
   }
   checks.push({k:"給与",ok:salOK,hard:false,d:salD});
-  // 夜勤
   const nightOK=!(j.night==="必須"&&c.night==="不可");
   checks.push({k:"夜勤",ok:nightOK,hard:false,d:`求人: ${j.night||"なし"} ／ 本人: ${c.night||"応相談"}`});
   const passed=checks.filter(x=>x.ok).length;
@@ -315,7 +396,6 @@ function renderDash(){
     ["求人",DB.jobs.length,"件"],["募集中求人",open.length,"件"]
   ];
   document.getElementById("dashStats").innerHTML=stats.map(s=>`<div class="stat"><div class="num">${s[1]}<span style="font-size:13px;font-weight:500"> ${s[2]}</span></div><div class="lbl">${s[0]}</div></div>`).join("");
-  // アラート: 在留期限90日以内
   const now=new Date(),alerts=[];
   DB.cands.forEach(c=>{
     if(c.visaExpiry){
@@ -325,7 +405,6 @@ function renderDash(){
     }
   });
   document.getElementById("dashAlerts").innerHTML=alerts.join("")||'<div class="empty">アラートはありません</div>';
-  // 再マッチング候補
   const rows=unmatched.map(c=>{
     const fits=open.map(j=>({j,m:evalMatch(c,j)})).filter(x=>!x.m.hardNG&&x.m.score>=67).sort((a,b)=>b.m.score-a.m.score);
     return {c,fits};
@@ -369,7 +448,7 @@ function renderCands(){
   const list=DB.cands.filter(c=>
     (!q||(c.name+c.kana+c.nationality).toLowerCase().includes(q))&&
     (!fs||c.status===fs)&&(!fv||c.visa===fv)&&(!fq||(c.quals||[]).includes(fq)));
-  const sb={"未マッチ":"b-amber","選考中":"b-blue","マッチ済":"b-green","辞退":"b-red","不採用":"b-red"};
+  const sb2={"未マッチ":"b-amber","選考中":"b-blue","マッチ済":"b-green","辞退":"b-red","不採用":"b-red"};
   document.getElementById("candBody").innerHTML=list.length?list.map(c=>`<tr>
     <td><b>${esc(c.name)}</b><br><span class="small">${esc(c.nationality||"")}${c.expYears?` / 経験${c.expYears}年`:""}</span></td>
     <td>${esc(c.nationality||"-")}</td>
@@ -380,7 +459,7 @@ function renderCands(){
     <td>${esc(c.desiredLoc||"-")}</td>
     <td>${c.desiredSalary?c.desiredSalary+"万":"-"}</td>
     <td>${esc(c.night||"-")}</td>
-    <td><span class="badge ${sb[c.status]||"b-gray"}">${esc(c.status)}</span></td>
+    <td><span class="badge ${sb2[c.status]||"b-gray"}">${esc(c.status)}</span></td>
     <td style="white-space:nowrap">
       <button class="btn sm" onclick="gotoRematch('${c.id}')">求人探索</button>
       <button class="btn sm gray" onclick="openCandModal('${c.id}')">編集</button>
@@ -404,7 +483,7 @@ function openCandModal(id){
 }
 function setV(id,v){document.getElementById(id).value=v??"";}
 function gV(id){return document.getElementById(id).value.trim();}
-function saveCand(){
+async function saveCand(){
   if(!gV("f_name")){toast("氏名は必須です");return;}
   const c={
     id:editCandId||uid(),name:gV("f_name"),kana:gV("f_kana"),nationality:gV("f_nationality"),birth:gV("f_birth"),
@@ -414,17 +493,22 @@ function saveCand(){
     phone:gV("f_phone"),email:gV("f_email"),status:gV("f_status"),sourceJob:gV("f_source"),memo:gV("f_memo"),
     createdAt:editCandId?(DB.cands.find(x=>x.id===editCandId)||{}).createdAt:new Date().toISOString()
   };
+  if(!await upsertRow("gm_cands",c))return;
   if(editCandId){DB.cands=DB.cands.map(x=>x.id===editCandId?c:x);}else{DB.cands.push(c);}
-  save();closeModal("candModal");renderAll();toast("人材を保存しました");
+  closeModal("candModal");renderAll();toast("人材を保存しました");
 }
-function delCand(id){if(confirm("この人材を削除しますか？")){DB.cands=DB.cands.filter(x=>x.id!==id);save();renderAll();}}
+async function delCand(id){
+  if(!confirm("この人材を削除しますか？"))return;
+  if(!await deleteRow("gm_cands",id))return;
+  DB.cands=DB.cands.filter(x=>x.id!==id);renderAll();
+}
 
 // ===== 求人 =====
 function renderJobs(){
   const q=(document.getElementById("jSearch").value||"").toLowerCase();
   const fs=document.getElementById("jFilterStatus").value;
   const list=DB.jobs.filter(j=>(!q||(j.title+j.company).toLowerCase().includes(q))&&(!fs||j.status===fs));
-  const sb={"募集中":"b-green","充足":"b-blue","終了":"b-gray"};
+  const sb2={"募集中":"b-green","充足":"b-blue","終了":"b-gray"};
   document.getElementById("jobBody").innerHTML=list.length?list.map(j=>`<tr>
     <td><b>${esc(j.title)}</b></td>
     <td>${esc(j.company)}</td>
@@ -435,7 +519,7 @@ function renderJobs(){
     <td>${(j.visas||[]).map(x=>`<span class="badge b-teal">${esc(x)}</span>`).join(" ")||"制限なし"}</td>
     <td>${esc(j.jpLevel||"不問")}</td>
     <td>${esc(j.night||"なし")}</td>
-    <td><span class="badge ${sb[j.status]||"b-gray"}">${esc(j.status)}</span></td>
+    <td><span class="badge ${sb2[j.status]||"b-gray"}">${esc(j.status)}</span></td>
     <td style="white-space:nowrap">
       <button class="btn sm" onclick="gotoJobMatch('${j.id}')">人材探索</button>
       <button class="btn sm gray" onclick="openJobModal('${j.id}')">編集</button>
@@ -446,6 +530,7 @@ let editJobId=null;
 function openJobModal(id){
   editJobId=id||null;
   document.getElementById("jobModalTitle").textContent=id?"求人を編集":"求人を登録";
+  document.getElementById("jobPdfStatus").textContent="";
   const j=id?DB.jobs.find(x=>x.id===id):{};
   setV("j_title",j.title);setV("j_company",j.company);setV("j_type",j.jobType||"介護職員（施設）");setV("j_loc",j.location);
   setV("j_salMin",j.salaryMin);setV("j_salMax",j.salaryMax);setV("j_jp",j.jpLevel);setV("j_night",j.night||"なし");
@@ -454,7 +539,7 @@ function openJobModal(id){
   document.querySelectorAll("#j_visas input").forEach(i=>i.checked=(j.visas||[]).includes(i.value));
   document.getElementById("jobModal").classList.add("open");
 }
-function saveJob(){
+async function saveJob(){
   if(!gV("j_title")||!gV("j_company")){toast("求人名と企業名は必須です");return;}
   const j={
     id:editJobId||uid(),title:gV("j_title"),company:gV("j_company"),jobType:gV("j_type"),location:gV("j_loc"),
@@ -464,10 +549,15 @@ function saveJob(){
     jpLevel:gV("j_jp"),night:gV("j_night"),headcount:Number(gV("j_head"))||1,status:gV("j_status"),memo:gV("j_memo"),
     createdAt:editJobId?(DB.jobs.find(x=>x.id===editJobId)||{}).createdAt:new Date().toISOString()
   };
+  if(!await upsertRow("gm_jobs",j))return;
   if(editJobId){DB.jobs=DB.jobs.map(x=>x.id===editJobId?j:x);}else{DB.jobs.push(j);}
-  save();closeModal("jobModal");renderAll();toast("求人を保存しました");
+  closeModal("jobModal");renderAll();toast("求人を保存しました");
 }
-function delJob(id){if(confirm("この求人を削除しますか？")){DB.jobs=DB.jobs.filter(x=>x.id!==id);save();renderAll();}}
+async function delJob(id){
+  if(!confirm("この求人を削除しますか？"))return;
+  if(!await deleteRow("gm_jobs",id))return;
+  DB.jobs=DB.jobs.filter(x=>x.id!==id);renderAll();
+}
 function closeModal(id){document.getElementById(id).classList.remove("open");}
 
 // ===== マッチング画面 =====
@@ -523,29 +613,35 @@ function renderMatch(){
   }).join(""):'<div class="card empty">対象データがありません</div>';
 }
 
-// ===== PDF履歴書 自動抽出 =====
+// ===== PDF共通抽出 =====
+async function extractPdfText(file){
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  let text="";
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const tc=await page.getTextContent();
+    let lastY=null,line="";
+    const lines=[];
+    tc.items.forEach(it=>{
+      const y=Math.round(it.transform[5]);
+      if(lastY!==null&&Math.abs(y-lastY)>4){lines.push(line);line="";}
+      line+=it.str+" ";lastY=y;
+    });
+    lines.push(line);
+    text+=lines.join("\n")+"\n";
+  }
+  return text;
+}
+
+// ===== 履歴書PDF 自動抽出 =====
 async function parsePDF(file){
   if(!file)return;
   const st=document.getElementById("pdfStatus");
   if(!window.pdfjsLib){st.textContent="⚠ PDF読取ライブラリを読み込めませんでした（ネット接続をご確認ください）";return;}
   st.textContent="読み取り中...";
   try{
-    const buf=await file.arrayBuffer();
-    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
-    let text="";
-    for(let p=1;p<=pdf.numPages;p++){
-      const page=await pdf.getPage(p);
-      const tc=await page.getTextContent();
-      let lastY=null,line="";
-      const lines=[];
-      tc.items.forEach(it=>{
-        const y=Math.round(it.transform[5]);
-        if(lastY!==null&&Math.abs(y-lastY)>4){lines.push(line);line="";}
-        line+=it.str+" ";lastY=y;
-      });
-      lines.push(line);
-      text+=lines.join("\n")+"\n";
-    }
+    const text=await extractPdfText(file);
     if(!text.trim()){st.textContent="⚠ テキストを抽出できませんでした（スキャン画像PDFの可能性があります）。手入力をお願いします。";return;}
     applyExtracted(text,st);
   }catch(e){st.textContent="⚠ 読み取りに失敗しました: "+e.message;}
@@ -554,33 +650,25 @@ function applyExtracted(text,st){
   const found=[];
   const set=(id,v,label)=>{if(v){document.getElementById(id).value=v;found.push(label);}};
   const norm=text.replace(/[：]/g,":").replace(/　/g," ");
-  // 氏名
   let m=norm.match(/氏\s*名\s*:?\s*([^\n:]{2,30})/);
   if(m)set("f_name",m[1].replace(/\s+$/,"").trim(),"氏名");
   m=norm.match(/(?:フリガナ|ふりがな)\s*:?\s*([^\n:]{2,30})/);
   if(m)set("f_kana",m[1].trim(),"フリガナ");
-  // 生年月日
   m=norm.match(/((?:19|20)\d{2})\s*[年\/\-\.]\s*(\d{1,2})\s*[月\/\-\.]\s*(\d{1,2})/);
   if(m)set("f_birth",`${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`,"生年月日");
-  // 国籍
   m=norm.match(/国\s*籍\s*:?\s*([^\s\n:]{2,15})/);
   if(m){set("f_nationality",m[1],"国籍");}
   else{const n=NATIONS.find(n=>norm.includes(n));if(n)set("f_nationality",n,"国籍");}
-  // 在留資格
   const visa=VISAS.filter(v=>v!=="その他").find(v=>norm.includes(v))||(norm.includes("特定技能")?"特定技能1号":null);
   if(visa){document.getElementById("f_visa").value=visa;found.push("在留資格");}
-  // 在留期限
   m=norm.match(/(?:在留期限|在留期間[^\n]*満了)[^\d]*((?:19|20)\d{2})\s*[年\/\-\.]\s*(\d{1,2})\s*[月\/\-\.]\s*(\d{1,2})/);
   if(m)set("f_visaExpiry",`${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`,"在留期限");
-  // JLPT
   m=norm.match(/(?:JLPT|日本語能力試験)\s*[^N\n]{0,10}(N\s*[1-5])/i)||norm.match(/\b(N[1-5])\b/);
   if(m){document.getElementById("f_jp").value=m[1].replace(/\s/g,"").toUpperCase();found.push("日本語レベル");}
-  // 資格
   const qmap={"介護福祉士":"介護福祉士","実務者研修":"実務者研修","初任者研修":"初任者研修","ヘルパー2級":"初任者研修","介護技能評価試験":"介護技能評価試験合格","介護日本語評価試験":"介護日本語評価試験合格","普通自動車":"普通自動車免許"};
   const hit=new Set();
   Object.keys(qmap).forEach(k=>{if(norm.includes(k))hit.add(qmap[k]);});
   if(hit.size){document.querySelectorAll("#f_quals input").forEach(i=>{if(hit.has(i.value))i.checked=true;});found.push("保有資格");}
-  // 連絡先
   m=norm.match(/0\d{1,3}[-‐ー]?\d{2,4}[-‐ー]?\d{3,4}/);
   if(m)set("f_phone",m[0],"電話");
   m=norm.match(/[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}/);
@@ -588,29 +676,100 @@ function applyExtracted(text,st){
   st.textContent=found.length?`✅ 自動反映: ${found.join("・")}（内容を必ずご確認ください）`:"⚠ 自動抽出できる項目が見つかりませんでした。手入力をお願いします。";
 }
 
-// ===== エクスポート / インポート =====
+// ===== 求人票PDF 自動抽出 =====
+async function parseJobPDF(file){
+  if(!file)return;
+  const st=document.getElementById("jobPdfStatus");
+  if(!window.pdfjsLib){st.textContent="⚠ PDF読取ライブラリを読み込めませんでした（ネット接続をご確認ください）";return;}
+  st.textContent="読み取り中...";
+  try{
+    const text=await extractPdfText(file);
+    if(!text.trim()){st.textContent="⚠ テキストを抽出できませんでした（スキャン画像PDFの可能性があります）。手入力をお願いします。";return;}
+    applyJobExtracted(text,st);
+  }catch(e){st.textContent="⚠ 読み取りに失敗しました: "+e.message;}
+}
+function toMan(s){
+  // "23万" / "23.5万" / "230,000円" / "230000" → 万円数値
+  s=s.replace(/[，,]/g,"");
+  const n=parseFloat(s);
+  if(isNaN(n))return null;
+  return n>=10000?Math.round(n/1000)/10:n;
+}
+function applyJobExtracted(text,st){
+  const found=[];
+  const set=(id,v,label)=>{if(v!==null&&v!==undefined&&v!==""){document.getElementById(id).value=v;found.push(label);}};
+  const norm=text.replace(/[：]/g,":").replace(/　/g," ").replace(/[〜～]/g,"〜");
+  // 施設・企業名
+  let m=norm.match(/(?:法人名|会社名|事業所名|施設名|企業名|運営法人)\s*:?\s*([^\n:]{2,40})/);
+  if(m)set("j_company",m[1].trim(),"企業・施設名");
+  // 求人名（タイトル）: 求人名/職種名/募集職種 の行、なければ 職種+施設名で組み立て
+  m=norm.match(/(?:求人名|募集職種|職種名|求人タイトル)\s*:?\s*([^\n:]{2,50})/);
+  if(m)set("j_title",m[1].trim(),"求人名");
+  // 職種
+  const typeMap=[["訪問介護","訪問介護"],["デイサービス","デイサービス"],["通所介護","デイサービス"],["看護助手","看護助手"],["介護","介護職員（施設）"]];
+  const t=typeMap.find(x=>norm.includes(x[0]));
+  if(t){document.getElementById("j_type").value=t[1];found.push("職種");}
+  // 勤務地
+  m=norm.match(/(?:勤務地|勤務場所|就業場所|所在地|住所)\s*:?\s*([^\n:]{3,50})/);
+  if(m)set("j_loc",m[1].trim(),"勤務地");
+  // 給与（月給 XX万〜YY万 / XXX,XXX円〜YYY,YYY円）
+  m=norm.match(/(?:月給|月額|基本給|給与)[^\d\n]{0,15}([\d,，.]+)\s*(?:万?円?)\s*(?:〜|-)\s*([\d,，.]+)\s*(?:万?円?)/);
+  if(m){
+    const lo=toMan(m[1]),hi=toMan(m[2]);
+    if(lo){set("j_salMin",lo,"月給下限");}
+    if(hi){set("j_salMax",hi,"月給上限");}
+  }else{
+    m=norm.match(/(?:月給|月額|基本給)[^\d\n]{0,15}([\d,，.]+)\s*(?:万?円?)/);
+    if(m){const lo=toMan(m[1]);if(lo)set("j_salMin",lo,"月給");}
+  }
+  // 必要資格
+  const qmap={"介護福祉士":"介護福祉士","実務者研修":"実務者研修","初任者研修":"初任者研修","ヘルパー2級":"初任者研修","介護技能評価試験":"介護技能評価試験合格","介護日本語評価試験":"介護日本語評価試験合格","普通自動車":"普通自動車免許","要免許":"普通自動車免許"};
+  const hit=new Set();
+  Object.keys(qmap).forEach(k=>{if(norm.includes(k))hit.add(qmap[k]);});
+  if(hit.size){document.querySelectorAll("#j_quals input").forEach(i=>{if(hit.has(i.value))i.checked=true;});found.push("必要資格");}
+  // 受入在留資格
+  const vhit=VISAS.filter(v=>v!=="その他"&&norm.includes(v));
+  if(norm.includes("特定技能")&&!vhit.includes("特定技能1号"))vhit.push("特定技能1号");
+  if(vhit.length){document.querySelectorAll("#j_visas input").forEach(i=>{if(vhit.includes(i.value))i.checked=true;});found.push("受入在留資格");}
+  // 日本語レベル
+  m=norm.match(/(?:JLPT|日本語能力|日本語)\s*[^N\n]{0,10}(N\s*[1-5])/i)||norm.match(/\b(N[1-5])\b/);
+  if(m){document.getElementById("j_jp").value=m[1].replace(/\s/g,"").toUpperCase();found.push("日本語レベル");}
+  // 夜勤
+  if(/夜勤\s*(?:な|無)し/.test(norm)){document.getElementById("j_night").value="なし";found.push("夜勤");}
+  else if(/夜勤[^\n]{0,10}(?:必須|あり(?!。?\s*(?:な|無)し))/.test(norm)){
+    document.getElementById("j_night").value=/必須/.test(norm.match(/夜勤[^\n]{0,10}/)[0])?"必須":"あり（応相談）";found.push("夜勤");
+  }else if(norm.includes("夜勤")){document.getElementById("j_night").value="あり（応相談）";found.push("夜勤");}
+  // 募集人数
+  m=norm.match(/(?:募集人[数員]|採用人数)\s*:?\s*(\d{1,2})/);
+  if(m)set("j_head",Number(m[1]),"募集人数");
+  // タイトル未取得なら組み立て
+  if(!gV("j_title")&&gV("j_company")){
+    const tp=document.getElementById("j_type").value;
+    set("j_title",`${tp}（${gV("j_loc")||gV("j_company")}）`,"求人名(自動生成)");
+  }
+  st.textContent=found.length?`✅ 自動反映: ${found.join("・")}（内容を必ずご確認ください）`:"⚠ 自動抽出できる項目が見つかりませんでした。手入力をお願いします。";
+}
+
+// ===== バックアップ / インポート =====
 function exportJSON(){
   const blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download=`matching_data_${new Date().toISOString().slice(0,10)}.json`;
+  a.download=`matching_backup_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
-  toast("データをダウンロードしました。社内共有フォルダ等で共有してください。");
+  toast("バックアップをダウンロードしました");
 }
 function importJSON(input){
   const f=input.files[0];if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{
+  r.onload=async()=>{
     try{
       const d=JSON.parse(r.result);
       if(!d.cands||!d.jobs)throw new Error("形式が不正です");
-      if(!confirm(`人材${d.cands.length}名・求人${d.jobs.length}件を読み込みます。現在のデータに追記（重複IDは上書き）しますか？\nキャンセル→全置換したい場合は一度OKで追記後にご調整ください。`)){
-        DB=d;
-      }else{
-        d.cands.forEach(c=>{const i=DB.cands.findIndex(x=>x.id===c.id);if(i>=0)DB.cands[i]=c;else DB.cands.push(c);});
-        d.jobs.forEach(j=>{const i=DB.jobs.findIndex(x=>x.id===j.id);if(i>=0)DB.jobs[i]=j;else DB.jobs.push(j);});
-      }
-      save();renderAll();toast("インポートしました");
+      if(!confirm(`人材${d.cands.length}名・求人${d.jobs.length}件を共有データベースに追加（同IDは上書き）します。よろしいですか？`))return;
+      for(const c of d.cands)await upsertRow("gm_cands",c);
+      for(const j of d.jobs)await upsertRow("gm_jobs",j);
+      await loadAll();renderAll();toast("インポートしました");
     }catch(e){toast("読み込み失敗: "+e.message);}
     input.value="";
   };
@@ -618,16 +777,17 @@ function importJSON(input){
 }
 
 // ===== デモデータ =====
-function loadDemo(){
-  if(DB.cands.length||DB.jobs.length){if(!confirm("デモデータを追加します。よろしいですか？"))return;}
+async function loadDemo(){
+  if(DB.cands.length||DB.jobs.length){if(!confirm("デモデータを共有データベースに追加します。全員に表示されます。よろしいですか？"))return;}
   const j1={id:uid(),title:"特養 介護職員（住吉区）",company:"社会福祉法人あおぞら会",jobType:"介護職員（施設）",location:"大阪市住吉区",salaryMin:20,salaryMax:24,reqQuals:["初任者研修"],visas:["特定技能1号","介護","永住者","定住者"],jpLevel:"N4",night:"必須",headcount:2,status:"募集中",memo:"",createdAt:new Date().toISOString()};
   const j2={id:uid(),title:"デイサービス スタッフ（堺市）",company:"株式会社ケアライフ堺",jobType:"デイサービス",location:"堺市北区",salaryMin:19,salaryMax:22,reqQuals:[],visas:["特定技能1号","技能実習","介護","永住者","日本人の配偶者等"],jpLevel:"N3",night:"なし",headcount:1,status:"募集中",memo:"",createdAt:new Date().toISOString()};
   const j3={id:uid(),title:"訪問介護ヘルパー（天王寺）",company:"ヘルパーステーションひまわり",jobType:"訪問介護",location:"大阪市天王寺区",salaryMin:21,salaryMax:26,reqQuals:["初任者研修","普通自動車免許"],visas:["介護","永住者","定住者","日本人の配偶者等"],jpLevel:"N2",night:"なし",headcount:1,status:"募集中",memo:"訪問系は在留資格の制限に注意",createdAt:new Date().toISOString()};
   const c1={id:uid(),name:"グエン・ティ・フオン",kana:"グエン ティ フオン",nationality:"ベトナム",birth:"1998-04-12",gender:"女性",visa:"特定技能1号",visaExpiry:"2026-11-30",jpLevel:"N3",quals:["初任者研修","介護技能評価試験合格","介護日本語評価試験合格"],expYears:"2",desiredLoc:"大阪市、堺市",desiredSalary:21,night:"可",phone:"080-1234-5678",email:"",status:"未マッチ",sourceJob:j1.id,memo:"1回目求人は夜勤回数が合わず辞退",createdAt:new Date().toISOString()};
   const c2={id:uid(),name:"サントス・マリア",kana:"サントス マリア",nationality:"フィリピン",birth:"1990-08-25",gender:"女性",visa:"永住者",visaExpiry:"",jpLevel:"N2",quals:["実務者研修","普通自動車免許"],expYears:"5",desiredLoc:"大阪市",desiredSalary:23,night:"応相談",phone:"090-2345-6789",email:"",status:"未マッチ",sourceJob:j2.id,memo:"",createdAt:new Date().toISOString()};
   const c3={id:uid(),name:"アウン・ミン",kana:"アウン ミン",nationality:"ミャンマー",birth:"2000-01-15",gender:"男性",visa:"技能実習",visaExpiry:"2026-09-15",jpLevel:"N4",quals:["介護技能評価試験合格"],expYears:"1",desiredLoc:"堺市",desiredSalary:19,night:"不可",phone:"070-3456-7890",email:"",status:"選考中",sourceJob:j2.id,memo:"特定技能への移行準備中",createdAt:new Date().toISOString()};
-  DB.jobs.push(j1,j2,j3);DB.cands.push(c1,c2,c3);
-  save();renderAll();toast("デモデータを追加しました");
+  for(const j of [j1,j2,j3])await upsertRow("gm_jobs",j);
+  for(const c of [c1,c2,c3])await upsertRow("gm_cands",c);
+  await loadAll();renderAll();toast("デモデータを追加しました");
 }
 
 init();
