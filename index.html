@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外国人材マッチング管理</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --navy:#1e3a5f; --teal:#0e7c7b; --bg:#f4f6f9; --card:#fff; --line:#e2e8f0;
+  --ok:#16a34a; --ng:#dc2626; --warn:#d97706; --muted:#64748b; --ink:#1e293b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+header{background:var(--navy);color:#fff;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:50}
+header h1{font-size:17px;font-weight:700}
+header .sub{font-size:11px;opacity:.75}
+header .spacer{flex:1}
+.hbtn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px}
+.hbtn:hover{background:rgba(255,255,255,.25)}
+nav{background:#fff;border-bottom:1px solid var(--line);padding:0 20px;display:flex;gap:4px;position:sticky;top:46px;z-index:49}
+nav button{border:none;background:none;padding:12px 18px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;font-weight:600}
+nav button.active{color:var(--navy);border-bottom-color:var(--teal)}
+main{padding:20px;max-width:1280px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.card h2{font-size:15px;margin-bottom:12px;color:var(--navy)}
+.grid{display:grid;gap:12px}
+.grid.cols4{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.stat .num{font-size:26px;font-weight:700;color:var(--navy)}
+.stat .lbl{font-size:12px;color:var(--muted)}
+.btn{background:var(--teal);color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600}
+.btn:hover{opacity:.9}
+.btn.gray{background:#e2e8f0;color:var(--ink)}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn.danger{background:var(--ng)}
+table{width:100%;border-collapse:collapse}
+th{background:#f8fafc;text-align:left;padding:8px 10px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:#f8fafc}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-blue{background:#dbeafe;color:#1d4ed8}.b-green{background:#dcfce7;color:#15803d}
+.b-red{background:#fee2e2;color:#b91c1c}.b-amber{background:#fef3c7;color:#b45309}
+.b-gray{background:#f1f5f9;color:#475569}.b-teal{background:#ccfbf1;color:#0f766e}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:12px;font-weight:600;margin:2px}
+.c-ok{background:#dcfce7;color:#15803d}.c-ng{background:#fee2e2;color:#b91c1c}.c-na{background:#f1f5f9;color:#64748b}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+select,input[type=text],input[type=number],input[type=date],input[type=email],textarea{
+  border:1px solid #cbd5e1;border-radius:6px;padding:7px 9px;font-size:13px;font-family:inherit;background:#fff}
+textarea{width:100%;min-height:56px}
+label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:3px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.fitem.wide{grid-column:1/-1}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;z-index:100;overflow-y:auto;padding:30px 15px}
+.modal-bg.open{display:block}
+.modal{background:#fff;border-radius:12px;max-width:860px;margin:0 auto;padding:22px}
+.modal h3{color:var(--navy);margin-bottom:14px;font-size:16px}
+.modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.checks label{display:inline-flex;align-items:center;gap:4px;border:1px solid #cbd5e1;border-radius:14px;padding:4px 10px;cursor:pointer;font-weight:500;color:var(--ink);margin:0;font-size:12px}
+.checks label:has(input:checked){background:#ccfbf1;border-color:var(--teal);color:#0f766e;font-weight:700}
+.checks input{accent-color:var(--teal)}
+.dropzone{border:2px dashed #94a3b8;border-radius:10px;padding:18px;text-align:center;color:var(--muted);cursor:pointer;background:#f8fafc;margin-bottom:14px}
+.dropzone.drag{border-color:var(--teal);background:#ccfbf1}
+.score-bar{height:8px;border-radius:4px;background:#e2e8f0;overflow:hidden;min-width:80px}
+.score-bar>div{height:100%;border-radius:4px}
+.match-row{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fff}
+.match-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.match-head .name{font-weight:700;font-size:14px}
+.pct{font-size:18px;font-weight:800;min-width:56px}
+.pct.hi{color:var(--ok)}.pct.mid{color:var(--warn)}.pct.lo{color:var(--ng)}
+.small{font-size:12px;color:var(--muted)}
+.alert{border-left:4px solid var(--warn);background:#fffbeb;padding:10px 12px;border-radius:6px;margin-bottom:8px;font-size:13px}
+.alert.red{border-left-color:var(--ng);background:#fef2f2}
+.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.empty{text-align:center;color:var(--muted);padding:30px;font-size:13px}
+.link{color:var(--teal);cursor:pointer;text-decoration:underline;font-weight:600}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:200;display:none}
+@media(max-width:700px){nav button{padding:10px 10px;font-size:12px}main{padding:12px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>外国人材マッチング管理</h1><div class="sub">人材・求人プール / ミスマッチ可視化 / 社内運用</div></div>
+  <div class="spacer"></div>
+  <button class="hbtn" onclick="exportJSON()">📤 エクスポート(共有用)</button>
+  <button class="hbtn" onclick="document.getElementById('importFile').click()">📥 インポート</button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
+  <button class="hbtn" onclick="loadDemo()">デモデータ</button>
+</header>
+<nav>
+  <button id="tab-dash" class="active" onclick="showTab('dash')">📊 ダッシュボード</button>
+  <button id="tab-cand" onclick="showTab('cand')">👥 人材プール</button>
+  <button id="tab-job" onclick="showTab('job')">📋 求人プール</button>
+  <button id="tab-match" onclick="showTab('match')">🔍 マッチング</button>
+</nav>
+<main>
+
+<!-- ダッシュボード -->
+<section id="view-dash">
+  <div class="grid cols4" id="dashStats"></div>
+  <div class="card" style="margin-top:16px"><h2>⚠️ アラート</h2><div id="dashAlerts"></div></div>
+  <div class="card"><h2>💡 未マッチ人材の再マッチング候補</h2>
+    <p class="small" style="margin-bottom:10px">「未マッチ」「辞退」「不採用」の人材について、募集中求人への適合数を自動探索しています。クリックで詳細比較へ。</p>
+    <div id="dashRematch"></div>
+  </div>
+</section>
+
+<!-- 人材プール -->
+<section id="view-cand" style="display:none">
+  <div class="toolbar">
+    <div class="filters">
+      <input type="text" id="cSearch" placeholder="氏名・国籍で検索" oninput="renderCands()">
+      <select id="cFilterStatus" onchange="renderCands()"><option value="">全ステータス</option><option>未マッチ</option><option>選考中</option><option>マッチ済</option><option>辞退</option><option>不採用</option></select>
+      <select id="cFilterVisa" onchange="renderCands()"><option value="">全在留資格</option></select>
+      <select id="cFilterQual" onchange="renderCands()"><option value="">全資格</option></select>
+    </div>
+    <button class="btn" onclick="openCandModal()">＋ 人材を登録</button>
+  </div>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table id="candTable"><thead><tr>
+      <th>氏名</th><th>国籍</th><th>在留資格</th><th>在留期限</th><th>日本語</th><th>保有資格</th><th>希望勤務地</th><th>希望月給</th><th>夜勤</th><th>ステータス</th><th>操作</th>
+    </tr></thead><tbody id="candBody"></tbody></table>
+  </div>
+</section>
+
+<!-- 求人プール -->
+<section id="view-job" style="display:none">
+  <div class="toolbar">
+    <div class="filters">
+      <input type="text" id="jSearch" placeholder="求人名・企業名で検索" oninput="renderJobs()">
+      <select id="jFilterStatus" onchange="renderJobs()"><option value="">全ステータス</option><option>募集中</option><option>充足</option><option>終了</option></select>
+    </div>
+    <button class="btn" onclick="openJobModal()">＋ 求人を登録</button>
+  </div>
+  <div class="card" style="padding:0;overflow-x:auto">
+    <table><thead><tr>
+      <th>求人名</th><th>企業・施設</th><th>職種</th><th>勤務地</th><th>月給</th><th>必要資格</th><th>受入在留資格</th><th>日本語</th><th>夜勤</th><th>状態</th><th>操作</th>
+    </tr></thead><tbody id="jobBody"></tbody></table>
+  </div>
+</section>
+
+<!-- マッチング -->
+<section id="view-match" style="display:none">
+  <div class="card">
+    <h2>マッチング探索</h2>
+    <div class="filters">
+      <select id="matchMode" onchange="renderMatch()">
+        <option value="job">求人から人材を探す</option>
+        <option value="cand">人材から求人を探す（再マッチング）</option>
+      </select>
+      <select id="matchTarget" onchange="renderMatch()" style="min-width:260px"></select>
+      <label style="display:inline-flex;align-items:center;gap:5px;margin:0"><input type="checkbox" id="matchOnlyOpen" checked onchange="renderMatch()"> 募集中/未マッチのみ</label>
+    </div>
+    <p class="small">条件ごとに ✓（適合）/ ✕（ミスマッチ）を表示。在留資格・日本語レベルの不適合は「不可」と判定します。</p>
+  </div>
+  <div id="matchResults"></div>
+</section>
+</main>
+
+<!-- 人材モーダル -->
+<div class="modal-bg" id="candModal">
+  <div class="modal">
+    <h3 id="candModalTitle">人材を登録</h3>
+    <div class="dropzone" id="pdfZone" onclick="document.getElementById('pdfInput').click()">
+      📄 <b>履歴書PDFをここにドロップ / クリックして選択</b><br>
+      <span class="small">氏名・国籍・在留資格・日本語レベル・資格などを自動抽出してフォームに反映します（反映後に必ずご確認ください）</span>
+      <div id="pdfStatus" class="small" style="margin-top:6px;font-weight:700"></div>
+    </div>
+    <input type="file" id="pdfInput" accept=".pdf" style="display:none" onchange="parsePDF(this.files[0])">
+    <div class="fgrid">
+      <div class="fitem"><label>氏名 *</label><input type="text" id="f_name" style="width:100%"></div>
+      <div class="fitem"><label>フリガナ</label><input type="text" id="f_kana" style="width:100%"></div>
+      <div class="fitem"><label>国籍</label><input type="text" id="f_nationality" list="natList" style="width:100%"><datalist id="natList"></datalist></div>
+      <div class="fitem"><label>生年月日</label><input type="date" id="f_birth" style="width:100%"></div>
+      <div class="fitem"><label>性別</label><select id="f_gender" style="width:100%"><option value=""></option><option>男性</option><option>女性</option><option>その他</option></select></div>
+      <div class="fitem"><label>在留資格 *</label><select id="f_visa" style="width:100%"></select></div>
+      <div class="fitem"><label>在留期限</label><input type="date" id="f_visaExpiry" style="width:100%"></div>
+      <div class="fitem"><label>日本語レベル(JLPT)</label><select id="f_jp" style="width:100%"><option value="">未取得/不明</option><option>N1</option><option>N2</option><option>N3</option><option>N4</option><option>N5</option></select></div>
+      <div class="fitem wide"><label>保有資格</label><div class="checks" id="f_quals"></div></div>
+      <div class="fitem"><label>介護経験年数</label><input type="number" id="f_exp" min="0" style="width:100%"></div>
+      <div class="fitem"><label>希望勤務地（複数は「、」区切り）</label><input type="text" id="f_loc" placeholder="例: 大阪市、堺市" style="width:100%"></div>
+      <div class="fitem"><label>希望月給（万円）</label><input type="number" id="f_salary" min="0" style="width:100%"></div>
+      <div class="fitem"><label>夜勤</label><select id="f_night" style="width:100%"><option>応相談</option><option>可</option><option>不可</option></select></div>
+      <div class="fitem"><label>電話</label><input type="text" id="f_phone" style="width:100%"></div>
+      <div class="fitem"><label>メール</label><input type="email" id="f_email" style="width:100%"></div>
+      <div class="fitem"><label>ステータス</label><select id="f_status" style="width:100%"><option>未マッチ</option><option>選考中</option><option>マッチ済</option><option>辞退</option><option>不採用</option></select></div>
+      <div class="fitem"><label>応募元求人（流入元）</label><select id="f_source" style="width:100%"><option value="">なし</option></select></div>
+      <div class="fitem wide"><label>メモ</label><textarea id="f_memo"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn gray" onclick="closeModal('candModal')">キャンセル</button>
+      <button class="btn" onclick="saveCand()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 求人モーダル -->
+<div class="modal-bg" id="jobModal">
+  <div class="modal">
+    <h3 id="jobModalTitle">求人を登録</h3>
+    <div class="fgrid">
+      <div class="fitem"><label>求人名 *</label><input type="text" id="j_title" style="width:100%"></div>
+      <div class="fitem"><label>企業・施設名 *</label><input type="text" id="j_company" style="width:100%"></div>
+      <div class="fitem"><label>職種</label><select id="j_type" style="width:100%"><option>介護職員（施設）</option><option>訪問介護</option><option>デイサービス</option><option>看護助手</option><option>その他</option></select></div>
+      <div class="fitem"><label>勤務地</label><input type="text" id="j_loc" placeholder="例: 大阪市住吉区" style="width:100%"></div>
+      <div class="fitem"><label>月給 下限（万円）</label><input type="number" id="j_salMin" min="0" style="width:100%"></div>
+      <div class="fitem"><label>月給 上限（万円）</label><input type="number" id="j_salMax" min="0" style="width:100%"></div>
+      <div class="fitem wide"><label>必要資格（すべて満たす必要あり／なしなら未選択）</label><div class="checks" id="j_quals"></div></div>
+      <div class="fitem wide"><label>受入可能な在留資格（未選択＝制限なし）</label><div class="checks" id="j_visas"></div></div>
+      <div class="fitem"><label>必要日本語レベル（以上）</label><select id="j_jp" style="width:100%"><option value="">不問</option><option>N1</option><option>N2</option><option>N3</option><option>N4</option><option>N5</option></select></div>
+      <div class="fitem"><label>夜勤</label><select id="j_night" style="width:100%"><option>なし</option><option>あり（応相談）</option><option>必須</option></select></div>
+      <div class="fitem"><label>募集人数</label><input type="number" id="j_head" min="1" value="1" style="width:100%"></div>
+      <div class="fitem"><label>状態</label><select id="j_status" style="width:100%"><option>募集中</option><option>充足</option><option>終了</option></select></div>
+      <div class="fitem wide"><label>メモ</label><textarea id="j_memo"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn gray" onclick="closeModal('jobModal')">キャンセル</button>
+      <button class="btn" onclick="saveJob()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}
+
+// ===== 定数 =====
+const VISAS=["特定技能1号","特定技能2号","介護","技能実習","永住者","定住者","日本人の配偶者等","永住者の配偶者等","家族滞在","留学","技術・人文知識・国際業務","特定活動(EPA)","その他"];
+const QUALS=["介護福祉士","実務者研修","初任者研修","介護技能評価試験合格","介護日本語評価試験合格","普通自動車免許","看護師(母国)","その他資格"];
+const NATIONS=["ベトナム","フィリピン","インドネシア","ミャンマー","ネパール","中国","韓国","タイ","カンボジア","スリランカ","モンゴル","ブラジル","ペルー","バングラデシュ","インド"];
+const JPLV={"N1":5,"N2":4,"N3":3,"N4":2,"N5":1,"":0};
+
+// ===== データ =====
+let DB={cands:[],jobs:[]};
+const LS_KEY="gm_matching_db_v1";
+function load(){try{const d=localStorage.getItem(LS_KEY);if(d)DB=JSON.parse(d);}catch(e){}}
+function save(){localStorage.setItem(LS_KEY,JSON.stringify(DB));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.style.display="block";setTimeout(()=>t.style.display="none",2500);}
+
+// ===== 初期化 =====
+function init(){
+  load();
+  const fv=document.getElementById("f_visa");
+  fv.innerHTML='<option value=""></option>'+VISAS.map(v=>`<option>${v}</option>`).join("");
+  document.getElementById("natList").innerHTML=NATIONS.map(n=>`<option value="${n}">`).join("");
+  document.getElementById("f_quals").innerHTML=QUALS.map(q=>`<label><input type="checkbox" value="${q}">${q}</label>`).join("");
+  document.getElementById("j_quals").innerHTML=QUALS.map(q=>`<label><input type="checkbox" value="${q}">${q}</label>`).join("");
+  document.getElementById("j_visas").innerHTML=VISAS.map(v=>`<label><input type="checkbox" value="${v}">${v}</label>`).join("");
+  document.getElementById("cFilterVisa").innerHTML='<option value="">全在留資格</option>'+VISAS.map(v=>`<option>${v}</option>`).join("");
+  document.getElementById("cFilterQual").innerHTML='<option value="">全資格</option>'+QUALS.map(q=>`<option>${q}</option>`).join("");
+  // PDFドロップ
+  const z=document.getElementById("pdfZone");
+  z.addEventListener("dragover",e=>{e.preventDefault();z.classList.add("drag");});
+  z.addEventListener("dragleave",()=>z.classList.remove("drag"));
+  z.addEventListener("drop",e=>{e.preventDefault();z.classList.remove("drag");if(e.dataTransfer.files[0])parsePDF(e.dataTransfer.files[0]);});
+  renderAll();
+}
+function renderAll(){renderDash();renderCands();renderJobs();refreshMatchTargets();renderMatch();}
+
+// ===== タブ =====
+function showTab(t){
+  ["dash","cand","job","match"].forEach(x=>{
+    document.getElementById("view-"+x).style.display=x===t?"":"none";
+    document.getElementById("tab-"+x).classList.toggle("active",x===t);
+  });
+}
+
+// ===== マッチング判定（コア） =====
+function evalMatch(c,j){
+  const checks=[];
+  // 在留資格（ハード条件）
+  const visaOK=!(j.visas&&j.visas.length)||j.visas.includes(c.visa);
+  checks.push({k:"在留資格",ok:visaOK,hard:true,d:`本人: ${c.visa||"未設定"} ／ 受入: ${(j.visas&&j.visas.length)?j.visas.join("・"):"制限なし"}`});
+  // 日本語レベル（ハード条件）
+  const jpOK=!j.jpLevel||JPLV[c.jpLevel||""]>=JPLV[j.jpLevel];
+  checks.push({k:"日本語",ok:jpOK,hard:true,d:`本人: ${c.jpLevel||"未取得"} ／ 要件: ${j.jpLevel||"不問"}以上`});
+  // 資格
+  const req=j.reqQuals||[];
+  const missing=req.filter(q=>!(c.quals||[]).includes(q));
+  checks.push({k:"資格",ok:missing.length===0,hard:false,d:missing.length?`不足: ${missing.join("・")}`:(req.length?`要件充足（${req.join("・")}）`:"資格不問")});
+  // 勤務地
+  let locOK=true,locD="どちらか未設定のため判定対象外";
+  if(j.location&&c.desiredLoc){
+    const wants=c.desiredLoc.split(/[、,\/・\s]+/).filter(Boolean);
+    locOK=wants.some(w=>j.location.includes(w)||w.includes(j.location));
+    locD=`希望: ${c.desiredLoc} ／ 勤務地: ${j.location}`;
+  }
+  checks.push({k:"勤務地",ok:locOK,hard:false,d:locD});
+  // 給与
+  let salOK=true,salD="どちらか未設定のため判定対象外";
+  if(c.desiredSalary&&(j.salaryMax||j.salaryMin)){
+    const mx=j.salaryMax||j.salaryMin;
+    salOK=mx>=c.desiredSalary;
+    salD=`希望: ${c.desiredSalary}万円 ／ 提示: ${j.salaryMin||"?"}〜${j.salaryMax||"?"}万円`;
+  }
+  checks.push({k:"給与",ok:salOK,hard:false,d:salD});
+  // 夜勤
+  const nightOK=!(j.night==="必須"&&c.night==="不可");
+  checks.push({k:"夜勤",ok:nightOK,hard:false,d:`求人: ${j.night||"なし"} ／ 本人: ${c.night||"応相談"}`});
+  const passed=checks.filter(x=>x.ok).length;
+  const hardNG=checks.some(x=>x.hard&&!x.ok);
+  return {checks,score:Math.round(passed/checks.length*100),hardNG,passed,total:checks.length};
+}
+
+// ===== ダッシュボード =====
+function renderDash(){
+  const open=DB.jobs.filter(j=>j.status==="募集中");
+  const unmatched=DB.cands.filter(c=>["未マッチ","辞退","不採用"].includes(c.status));
+  const stats=[
+    ["登録人材",DB.cands.length,"名"],["未マッチ・再探索対象",unmatched.length,"名"],
+    ["求人",DB.jobs.length,"件"],["募集中求人",open.length,"件"]
+  ];
+  document.getElementById("dashStats").innerHTML=stats.map(s=>`<div class="stat"><div class="num">${s[1]}<span style="font-size:13px;font-weight:500"> ${s[2]}</span></div><div class="lbl">${s[0]}</div></div>`).join("");
+  // アラート: 在留期限90日以内
+  const now=new Date(),alerts=[];
+  DB.cands.forEach(c=>{
+    if(c.visaExpiry){
+      const days=Math.ceil((new Date(c.visaExpiry)-now)/864e5);
+      if(days<0)alerts.push(`<div class="alert red">⛔ <b>${esc(c.name)}</b> の在留期限が超過しています（${c.visaExpiry}）</div>`);
+      else if(days<=90)alerts.push(`<div class="alert">⏰ <b>${esc(c.name)}</b> の在留期限まで残り${days}日（${c.visaExpiry}）</div>`);
+    }
+  });
+  document.getElementById("dashAlerts").innerHTML=alerts.join("")||'<div class="empty">アラートはありません</div>';
+  // 再マッチング候補
+  const rows=unmatched.map(c=>{
+    const fits=open.map(j=>({j,m:evalMatch(c,j)})).filter(x=>!x.m.hardNG&&x.m.score>=67).sort((a,b)=>b.m.score-a.m.score);
+    return {c,fits};
+  }).sort((a,b)=>b.fits.length-a.fits.length);
+  document.getElementById("dashRematch").innerHTML=rows.length?rows.map(r=>`
+    <div class="match-row">
+      <div class="match-head">
+        <span class="name">${esc(r.c.name)}</span>
+        <span class="badge b-gray">${esc(r.c.visa||"在留資格未設定")}</span>
+        <span class="badge ${r.c.status==="未マッチ"?"b-amber":"b-red"}">${esc(r.c.status)}</span>
+        <span class="small">${r.c.sourceJob?("流入元: "+esc(jobName(r.c.sourceJob))):""}</span>
+        <div class="spacer" style="flex:1"></div>
+        <span class="badge ${r.fits.length?"b-green":"b-red"}">${r.fits.length?`適合求人 ${r.fits.length}件`:"適合求人なし"}</span>
+        <button class="btn sm" onclick="gotoRematch('${r.c.id}')">求人を探索 →</button>
+      </div>
+      ${r.fits.slice(0,3).map(f=>`<div class="small" style="margin-top:6px">・${esc(f.j.title)}（${esc(f.j.company)}） <b style="color:${f.m.score>=84?"var(--ok)":"var(--warn)"}">${f.m.score}%</b></div>`).join("")}
+    </div>`).join(""):'<div class="empty">再探索対象の人材はいません</div>';
+}
+function jobName(id){const j=DB.jobs.find(x=>x.id===id);return j?j.title:"(削除済)";}
+function gotoRematch(cid){
+  showTab("match");
+  document.getElementById("matchMode").value="cand";
+  refreshMatchTargets();
+  document.getElementById("matchTarget").value=cid;
+  renderMatch();
+}
+function gotoJobMatch(jid){
+  showTab("match");
+  document.getElementById("matchMode").value="job";
+  refreshMatchTargets();
+  document.getElementById("matchTarget").value=jid;
+  renderMatch();
+}
+
+// ===== 人材 =====
+function renderCands(){
+  const q=(document.getElementById("cSearch").value||"").toLowerCase();
+  const fs=document.getElementById("cFilterStatus").value;
+  const fv=document.getElementById("cFilterVisa").value;
+  const fq=document.getElementById("cFilterQual").value;
+  const list=DB.cands.filter(c=>
+    (!q||(c.name+c.kana+c.nationality).toLowerCase().includes(q))&&
+    (!fs||c.status===fs)&&(!fv||c.visa===fv)&&(!fq||(c.quals||[]).includes(fq)));
+  const sb={"未マッチ":"b-amber","選考中":"b-blue","マッチ済":"b-green","辞退":"b-red","不採用":"b-red"};
+  document.getElementById("candBody").innerHTML=list.length?list.map(c=>`<tr>
+    <td><b>${esc(c.name)}</b><br><span class="small">${esc(c.nationality||"")}${c.expYears?` / 経験${c.expYears}年`:""}</span></td>
+    <td>${esc(c.nationality||"-")}</td>
+    <td><span class="badge b-teal">${esc(c.visa||"-")}</span></td>
+    <td>${esc(c.visaExpiry||"-")}</td>
+    <td>${esc(c.jpLevel||"-")}</td>
+    <td>${(c.quals||[]).map(x=>`<span class="badge b-gray">${esc(x)}</span>`).join(" ")||"-"}</td>
+    <td>${esc(c.desiredLoc||"-")}</td>
+    <td>${c.desiredSalary?c.desiredSalary+"万":"-"}</td>
+    <td>${esc(c.night||"-")}</td>
+    <td><span class="badge ${sb[c.status]||"b-gray"}">${esc(c.status)}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn sm" onclick="gotoRematch('${c.id}')">求人探索</button>
+      <button class="btn sm gray" onclick="openCandModal('${c.id}')">編集</button>
+      <button class="btn sm danger" onclick="delCand('${c.id}')">削除</button>
+    </td></tr>`).join(""):'<tr><td colspan="11" class="empty">人材が登録されていません。「＋ 人材を登録」から追加、または右上の「デモデータ」でお試しください。</td></tr>';
+}
+let editCandId=null;
+function openCandModal(id){
+  editCandId=id||null;
+  document.getElementById("candModalTitle").textContent=id?"人材を編集":"人材を登録";
+  document.getElementById("pdfStatus").textContent="";
+  const src=document.getElementById("f_source");
+  src.innerHTML='<option value="">なし</option>'+DB.jobs.map(j=>`<option value="${j.id}">${esc(j.title)}</option>`).join("");
+  const c=id?DB.cands.find(x=>x.id===id):{};
+  setV("f_name",c.name);setV("f_kana",c.kana);setV("f_nationality",c.nationality);setV("f_birth",c.birth);
+  setV("f_gender",c.gender);setV("f_visa",c.visa);setV("f_visaExpiry",c.visaExpiry);setV("f_jp",c.jpLevel);
+  setV("f_exp",c.expYears);setV("f_loc",c.desiredLoc);setV("f_salary",c.desiredSalary);setV("f_night",c.night||"応相談");
+  setV("f_phone",c.phone);setV("f_email",c.email);setV("f_status",c.status||"未マッチ");setV("f_source",c.sourceJob);setV("f_memo",c.memo);
+  document.querySelectorAll("#f_quals input").forEach(i=>i.checked=(c.quals||[]).includes(i.value));
+  document.getElementById("candModal").classList.add("open");
+}
+function setV(id,v){document.getElementById(id).value=v??"";}
+function gV(id){return document.getElementById(id).value.trim();}
+function saveCand(){
+  if(!gV("f_name")){toast("氏名は必須です");return;}
+  const c={
+    id:editCandId||uid(),name:gV("f_name"),kana:gV("f_kana"),nationality:gV("f_nationality"),birth:gV("f_birth"),
+    gender:gV("f_gender"),visa:gV("f_visa"),visaExpiry:gV("f_visaExpiry"),jpLevel:gV("f_jp"),
+    quals:[...document.querySelectorAll("#f_quals input:checked")].map(i=>i.value),
+    expYears:gV("f_exp"),desiredLoc:gV("f_loc"),desiredSalary:Number(gV("f_salary"))||null,night:gV("f_night"),
+    phone:gV("f_phone"),email:gV("f_email"),status:gV("f_status"),sourceJob:gV("f_source"),memo:gV("f_memo"),
+    createdAt:editCandId?(DB.cands.find(x=>x.id===editCandId)||{}).createdAt:new Date().toISOString()
+  };
+  if(editCandId){DB.cands=DB.cands.map(x=>x.id===editCandId?c:x);}else{DB.cands.push(c);}
+  save();closeModal("candModal");renderAll();toast("人材を保存しました");
+}
+function delCand(id){if(confirm("この人材を削除しますか？")){DB.cands=DB.cands.filter(x=>x.id!==id);save();renderAll();}}
+
+// ===== 求人 =====
+function renderJobs(){
+  const q=(document.getElementById("jSearch").value||"").toLowerCase();
+  const fs=document.getElementById("jFilterStatus").value;
+  const list=DB.jobs.filter(j=>(!q||(j.title+j.company).toLowerCase().includes(q))&&(!fs||j.status===fs));
+  const sb={"募集中":"b-green","充足":"b-blue","終了":"b-gray"};
+  document.getElementById("jobBody").innerHTML=list.length?list.map(j=>`<tr>
+    <td><b>${esc(j.title)}</b></td>
+    <td>${esc(j.company)}</td>
+    <td>${esc(j.jobType||"-")}</td>
+    <td>${esc(j.location||"-")}</td>
+    <td>${j.salaryMin||j.salaryMax?`${j.salaryMin||"?"}〜${j.salaryMax||"?"}万`:"-"}</td>
+    <td>${(j.reqQuals||[]).map(x=>`<span class="badge b-gray">${esc(x)}</span>`).join(" ")||"不問"}</td>
+    <td>${(j.visas||[]).map(x=>`<span class="badge b-teal">${esc(x)}</span>`).join(" ")||"制限なし"}</td>
+    <td>${esc(j.jpLevel||"不問")}</td>
+    <td>${esc(j.night||"なし")}</td>
+    <td><span class="badge ${sb[j.status]||"b-gray"}">${esc(j.status)}</span></td>
+    <td style="white-space:nowrap">
+      <button class="btn sm" onclick="gotoJobMatch('${j.id}')">人材探索</button>
+      <button class="btn sm gray" onclick="openJobModal('${j.id}')">編集</button>
+      <button class="btn sm danger" onclick="delJob('${j.id}')">削除</button>
+    </td></tr>`).join(""):'<tr><td colspan="11" class="empty">求人が登録されていません</td></tr>';
+}
+let editJobId=null;
+function openJobModal(id){
+  editJobId=id||null;
+  document.getElementById("jobModalTitle").textContent=id?"求人を編集":"求人を登録";
+  const j=id?DB.jobs.find(x=>x.id===id):{};
+  setV("j_title",j.title);setV("j_company",j.company);setV("j_type",j.jobType||"介護職員（施設）");setV("j_loc",j.location);
+  setV("j_salMin",j.salaryMin);setV("j_salMax",j.salaryMax);setV("j_jp",j.jpLevel);setV("j_night",j.night||"なし");
+  setV("j_head",j.headcount||1);setV("j_status",j.status||"募集中");setV("j_memo",j.memo);
+  document.querySelectorAll("#j_quals input").forEach(i=>i.checked=(j.reqQuals||[]).includes(i.value));
+  document.querySelectorAll("#j_visas input").forEach(i=>i.checked=(j.visas||[]).includes(i.value));
+  document.getElementById("jobModal").classList.add("open");
+}
+function saveJob(){
+  if(!gV("j_title")||!gV("j_company")){toast("求人名と企業名は必須です");return;}
+  const j={
+    id:editJobId||uid(),title:gV("j_title"),company:gV("j_company"),jobType:gV("j_type"),location:gV("j_loc"),
+    salaryMin:Number(gV("j_salMin"))||null,salaryMax:Number(gV("j_salMax"))||null,
+    reqQuals:[...document.querySelectorAll("#j_quals input:checked")].map(i=>i.value),
+    visas:[...document.querySelectorAll("#j_visas input:checked")].map(i=>i.value),
+    jpLevel:gV("j_jp"),night:gV("j_night"),headcount:Number(gV("j_head"))||1,status:gV("j_status"),memo:gV("j_memo"),
+    createdAt:editJobId?(DB.jobs.find(x=>x.id===editJobId)||{}).createdAt:new Date().toISOString()
+  };
+  if(editJobId){DB.jobs=DB.jobs.map(x=>x.id===editJobId?j:x);}else{DB.jobs.push(j);}
+  save();closeModal("jobModal");renderAll();toast("求人を保存しました");
+}
+function delJob(id){if(confirm("この求人を削除しますか？")){DB.jobs=DB.jobs.filter(x=>x.id!==id);save();renderAll();}}
+function closeModal(id){document.getElementById(id).classList.remove("open");}
+
+// ===== マッチング画面 =====
+function refreshMatchTargets(){
+  const mode=document.getElementById("matchMode").value;
+  const sel=document.getElementById("matchTarget");
+  const cur=sel.value;
+  if(mode==="job"){
+    sel.innerHTML=DB.jobs.map(j=>`<option value="${j.id}">${esc(j.title)}（${esc(j.company)}）[${esc(j.status)}]</option>`).join("");
+  }else{
+    sel.innerHTML=DB.cands.map(c=>`<option value="${c.id}">${esc(c.name)}（${esc(c.visa||"在留資格未設定")}）[${esc(c.status)}]</option>`).join("");
+  }
+  if([...sel.options].some(o=>o.value===cur))sel.value=cur;
+}
+document.getElementById("matchMode").addEventListener("change",refreshMatchTargets);
+function chipHtml(ch){
+  const cls=ch.d.includes("判定対象外")?"c-na":(ch.ok?"c-ok":"c-ng");
+  const mark=ch.d.includes("判定対象外")?"−":(ch.ok?"✓":"✕");
+  return `<span class="chip ${cls}" title="${esc(ch.d)}">${mark} ${ch.k}</span>`;
+}
+function renderMatch(){
+  const mode=document.getElementById("matchMode").value;
+  const tid=document.getElementById("matchTarget").value;
+  const onlyOpen=document.getElementById("matchOnlyOpen").checked;
+  const box=document.getElementById("matchResults");
+  if(!tid){box.innerHTML='<div class="card empty">対象を選択してください（データ未登録の場合は先に登録してください）</div>';return;}
+  let rows=[];
+  if(mode==="job"){
+    const j=DB.jobs.find(x=>x.id===tid);if(!j){box.innerHTML="";return;}
+    let cands=DB.cands;
+    if(onlyOpen)cands=cands.filter(c=>["未マッチ","辞退","不採用","選考中"].includes(c.status));
+    rows=cands.map(c=>({label:`${c.name}`,sub:`${c.nationality||""} / ${c.visa||"在留資格未設定"} / ${c.jpLevel||"JLPTなし"} / ${c.status}`,m:evalMatch(c,j),id:c.id,type:"cand"}));
+  }else{
+    const c=DB.cands.find(x=>x.id===tid);if(!c){box.innerHTML="";return;}
+    let jobs=DB.jobs;
+    if(onlyOpen)jobs=jobs.filter(j=>j.status==="募集中");
+    rows=jobs.map(j=>({label:`${j.title}`,sub:`${j.company} / ${j.location||"勤務地未設定"} / ${j.salaryMin||"?"}〜${j.salaryMax||"?"}万円`,m:evalMatch(c,j),id:j.id,type:"job"}));
+  }
+  rows.sort((a,b)=>(a.m.hardNG?1:0)-(b.m.hardNG?1:0)||b.m.score-a.m.score);
+  box.innerHTML=rows.length?rows.map(r=>{
+    const p=r.m.score,cls=p>=84?"hi":(p>=50?"mid":"lo");
+    const bar=`<div class="score-bar" style="flex:1;max-width:160px"><div style="width:${p}%;background:${p>=84?"var(--ok)":(p>=50?"var(--warn)":"var(--ng)")}"></div></div>`;
+    return `<div class="match-row" style="${r.m.hardNG?"opacity:.65":""}">
+      <div class="match-head">
+        <span class="pct ${cls}">${p}%</span>${bar}
+        <span class="name">${esc(r.label)}</span>
+        <span class="small">${esc(r.sub)}</span>
+        ${r.m.hardNG?'<span class="badge b-red">不可（在留資格/日本語）</span>':(p===100?'<span class="badge b-green">完全マッチ</span>':"")}
+      </div>
+      <div style="margin-top:8px">${r.m.checks.map(chipHtml).join("")}</div>
+      <div class="small" style="margin-top:6px">${r.m.checks.filter(x=>!x.ok).map(x=>`<div>✕ <b>${x.k}</b>: ${esc(x.d)}</div>`).join("")||"すべての条件に適合しています"}</div>
+    </div>`;
+  }).join(""):'<div class="card empty">対象データがありません</div>';
+}
+
+// ===== PDF履歴書 自動抽出 =====
+async function parsePDF(file){
+  if(!file)return;
+  const st=document.getElementById("pdfStatus");
+  if(!window.pdfjsLib){st.textContent="⚠ PDF読取ライブラリを読み込めませんでした（ネット接続をご確認ください）";return;}
+  st.textContent="読み取り中...";
+  try{
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let text="";
+    for(let p=1;p<=pdf.numPages;p++){
+      const page=await pdf.getPage(p);
+      const tc=await page.getTextContent();
+      let lastY=null,line="";
+      const lines=[];
+      tc.items.forEach(it=>{
+        const y=Math.round(it.transform[5]);
+        if(lastY!==null&&Math.abs(y-lastY)>4){lines.push(line);line="";}
+        line+=it.str+" ";lastY=y;
+      });
+      lines.push(line);
+      text+=lines.join("\n")+"\n";
+    }
+    if(!text.trim()){st.textContent="⚠ テキストを抽出できませんでした（スキャン画像PDFの可能性があります）。手入力をお願いします。";return;}
+    applyExtracted(text,st);
+  }catch(e){st.textContent="⚠ 読み取りに失敗しました: "+e.message;}
+}
+function applyExtracted(text,st){
+  const found=[];
+  const set=(id,v,label)=>{if(v){document.getElementById(id).value=v;found.push(label);}};
+  const norm=text.replace(/[：]/g,":").replace(/　/g," ");
+  // 氏名
+  let m=norm.match(/氏\s*名\s*:?\s*([^\n:]{2,30})/);
+  if(m)set("f_name",m[1].replace(/\s+$/,"").trim(),"氏名");
+  m=norm.match(/(?:フリガナ|ふりがな)\s*:?\s*([^\n:]{2,30})/);
+  if(m)set("f_kana",m[1].trim(),"フリガナ");
+  // 生年月日
+  m=norm.match(/((?:19|20)\d{2})\s*[年\/\-\.]\s*(\d{1,2})\s*[月\/\-\.]\s*(\d{1,2})/);
+  if(m)set("f_birth",`${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`,"生年月日");
+  // 国籍
+  m=norm.match(/国\s*籍\s*:?\s*([^\s\n:]{2,15})/);
+  if(m){set("f_nationality",m[1],"国籍");}
+  else{const n=NATIONS.find(n=>norm.includes(n));if(n)set("f_nationality",n,"国籍");}
+  // 在留資格
+  const visa=VISAS.filter(v=>v!=="その他").find(v=>norm.includes(v))||(norm.includes("特定技能")?"特定技能1号":null);
+  if(visa){document.getElementById("f_visa").value=visa;found.push("在留資格");}
+  // 在留期限
+  m=norm.match(/(?:在留期限|在留期間[^\n]*満了)[^\d]*((?:19|20)\d{2})\s*[年\/\-\.]\s*(\d{1,2})\s*[月\/\-\.]\s*(\d{1,2})/);
+  if(m)set("f_visaExpiry",`${m[1]}-${String(m[2]).padStart(2,"0")}-${String(m[3]).padStart(2,"0")}`,"在留期限");
+  // JLPT
+  m=norm.match(/(?:JLPT|日本語能力試験)\s*[^N\n]{0,10}(N\s*[1-5])/i)||norm.match(/\b(N[1-5])\b/);
+  if(m){document.getElementById("f_jp").value=m[1].replace(/\s/g,"").toUpperCase();found.push("日本語レベル");}
+  // 資格
+  const qmap={"介護福祉士":"介護福祉士","実務者研修":"実務者研修","初任者研修":"初任者研修","ヘルパー2級":"初任者研修","介護技能評価試験":"介護技能評価試験合格","介護日本語評価試験":"介護日本語評価試験合格","普通自動車":"普通自動車免許"};
+  const hit=new Set();
+  Object.keys(qmap).forEach(k=>{if(norm.includes(k))hit.add(qmap[k]);});
+  if(hit.size){document.querySelectorAll("#f_quals input").forEach(i=>{if(hit.has(i.value))i.checked=true;});found.push("保有資格");}
+  // 連絡先
+  m=norm.match(/0\d{1,3}[-‐ー]?\d{2,4}[-‐ー]?\d{3,4}/);
+  if(m)set("f_phone",m[0],"電話");
+  m=norm.match(/[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}/);
+  if(m)set("f_email",m[0],"メール");
+  st.textContent=found.length?`✅ 自動反映: ${found.join("・")}（内容を必ずご確認ください）`:"⚠ 自動抽出できる項目が見つかりませんでした。手入力をお願いします。";
+}
+
+// ===== エクスポート / インポート =====
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`matching_data_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  toast("データをダウンロードしました。社内共有フォルダ等で共有してください。");
+}
+function importJSON(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result);
+      if(!d.cands||!d.jobs)throw new Error("形式が不正です");
+      if(!confirm(`人材${d.cands.length}名・求人${d.jobs.length}件を読み込みます。現在のデータに追記（重複IDは上書き）しますか？\nキャンセル→全置換したい場合は一度OKで追記後にご調整ください。`)){
+        DB=d;
+      }else{
+        d.cands.forEach(c=>{const i=DB.cands.findIndex(x=>x.id===c.id);if(i>=0)DB.cands[i]=c;else DB.cands.push(c);});
+        d.jobs.forEach(j=>{const i=DB.jobs.findIndex(x=>x.id===j.id);if(i>=0)DB.jobs[i]=j;else DB.jobs.push(j);});
+      }
+      save();renderAll();toast("インポートしました");
+    }catch(e){toast("読み込み失敗: "+e.message);}
+    input.value="";
+  };
+  r.readAsText(f);
+}
+
+// ===== デモデータ =====
+function loadDemo(){
+  if(DB.cands.length||DB.jobs.length){if(!confirm("デモデータを追加します。よろしいですか？"))return;}
+  const j1={id:uid(),title:"特養 介護職員（住吉区）",company:"社会福祉法人あおぞら会",jobType:"介護職員（施設）",location:"大阪市住吉区",salaryMin:20,salaryMax:24,reqQuals:["初任者研修"],visas:["特定技能1号","介護","永住者","定住者"],jpLevel:"N4",night:"必須",headcount:2,status:"募集中",memo:"",createdAt:new Date().toISOString()};
+  const j2={id:uid(),title:"デイサービス スタッフ（堺市）",company:"株式会社ケアライフ堺",jobType:"デイサービス",location:"堺市北区",salaryMin:19,salaryMax:22,reqQuals:[],visas:["特定技能1号","技能実習","介護","永住者","日本人の配偶者等"],jpLevel:"N3",night:"なし",headcount:1,status:"募集中",memo:"",createdAt:new Date().toISOString()};
+  const j3={id:uid(),title:"訪問介護ヘルパー（天王寺）",company:"ヘルパーステーションひまわり",jobType:"訪問介護",location:"大阪市天王寺区",salaryMin:21,salaryMax:26,reqQuals:["初任者研修","普通自動車免許"],visas:["介護","永住者","定住者","日本人の配偶者等"],jpLevel:"N2",night:"なし",headcount:1,status:"募集中",memo:"訪問系は在留資格の制限に注意",createdAt:new Date().toISOString()};
+  const c1={id:uid(),name:"グエン・ティ・フオン",kana:"グエン ティ フオン",nationality:"ベトナム",birth:"1998-04-12",gender:"女性",visa:"特定技能1号",visaExpiry:"2026-11-30",jpLevel:"N3",quals:["初任者研修","介護技能評価試験合格","介護日本語評価試験合格"],expYears:"2",desiredLoc:"大阪市、堺市",desiredSalary:21,night:"可",phone:"080-1234-5678",email:"",status:"未マッチ",sourceJob:j1.id,memo:"1回目求人は夜勤回数が合わず辞退",createdAt:new Date().toISOString()};
+  const c2={id:uid(),name:"サントス・マリア",kana:"サントス マリア",nationality:"フィリピン",birth:"1990-08-25",gender:"女性",visa:"永住者",visaExpiry:"",jpLevel:"N2",quals:["実務者研修","普通自動車免許"],expYears:"5",desiredLoc:"大阪市",desiredSalary:23,night:"応相談",phone:"090-2345-6789",email:"",status:"未マッチ",sourceJob:j2.id,memo:"",createdAt:new Date().toISOString()};
+  const c3={id:uid(),name:"アウン・ミン",kana:"アウン ミン",nationality:"ミャンマー",birth:"2000-01-15",gender:"男性",visa:"技能実習",visaExpiry:"2026-09-15",jpLevel:"N4",quals:["介護技能評価試験合格"],expYears:"1",desiredLoc:"堺市",desiredSalary:19,night:"不可",phone:"070-3456-7890",email:"",status:"選考中",sourceJob:j2.id,memo:"特定技能への移行準備中",createdAt:new Date().toISOString()};
+  DB.jobs.push(j1,j2,j3);DB.cands.push(c1,c2,c3);
+  save();renderAll();toast("デモデータを追加しました");
+}
+
+init();
+</script>
+</body>
+</html>
