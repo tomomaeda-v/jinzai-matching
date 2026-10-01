@@ -101,7 +101,7 @@ label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bot
     <div id="loginErr"></div>
     <button class="btn" style="width:100%" onclick="doLogin()">ログイン</button>
     <button class="btn gray" style="width:100%;margin-top:10px" onclick="doSignup()">新規登録（初めての方）</button>
-    <p style="margin-top:10px;margin-bottom:0">新規登録後、届いた確認メールのリンクをクリックしてからログインしてください。</p>
+    <p style="margin-top:10px;margin-bottom:0">新規登録すると、すぐにご利用いただけます。</p>
   </div>
 </div>
 
@@ -322,10 +322,12 @@ async function doSignup(){
   err.style.color="";err.textContent="";
   if(!email||!pass){err.textContent="メールアドレスとパスワードを入力してください";return;}
   if(pass.length<6){err.textContent="パスワードは6文字以上にしてください";return;}
-  const {error}=await sb.auth.signUp({email,password:pass});
+  const {data,error}=await sb.auth.signUp({email,password:pass});
   if(error){err.textContent="登録失敗: "+error.message;return;}
-  err.style.color="#15803d";
-  err.textContent="確認メールを送信しました。メール内のリンクをクリックした後、ログインしてください。";
+  if(data&&data.session){await enterApp();return;}
+  const {error:e2}=await sb.auth.signInWithPassword({email,password:pass});
+  if(!e2){await enterApp();return;}
+  err.textContent="このメールアドレスは登録済みです。パスワードをご確認のうえ「ログイン」を押してください。";
 }
 async function enterApp(){
   document.getElementById("loginOverlay").style.display="none";
@@ -724,7 +726,7 @@ function applyJobExtracted(text,st){
   m=norm.match(/(?:求人名|募集職種|職種名|求人タイトル)\s*:?\s*([^\n:]{2,50})/);
   if(m)set("j_title",m[1].trim(),"求人名");
   // 職種
-  const typeMap=[["訪問介護","訪問介護"],["デイサービス","デイサービス"],["通所介護","デイサービス"],["看護助手","看護助手"],["介護","介護職員（施設）"]];
+  const typeMap=[["介護","介護"],["外食","外食業"],["レストラン","外食業"],["宿泊","宿泊"],["ホテル","宿泊"],["飲食料品","飲食料品製造業"],["食品製造","飲食料品製造業"],["建設","建設"],["農業","農業"],["ビルクリーニング","ビルクリーニング"],["清掃","ビルクリーニング"],["自動車整備","自動車整備"],["運送","自動車運送業"],["ドライバー","自動車運送業"],["漁業","漁業"],["造船","造船・舶用工業"],["航空","航空"],["鉄道","鉄道"],["林業","林業"],["木材","木材産業"]];
   const t=typeMap.find(x=>norm.includes(x[0]));
   if(t){document.getElementById("j_type").value=t[1];found.push("職種");}
   // 勤務地
