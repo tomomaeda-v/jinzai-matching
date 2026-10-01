@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>介護のしごと 無料紹介 | Kaigo Job Support</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#1e3a5f;--teal:#0e7c7b;--bg:#f4f6f9;--line:#e2e8f0;--ink:#1e293b;--muted:#64748b;--ok:#16a34a;--ng:#dc2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6}
+.hero{background:linear-gradient(135deg,var(--navy),#0e7c7b);color:#fff;padding:28px 18px 24px;text-align:center}
+.hero h1{font-size:24px;margin-bottom:8px}
+.hero p{font-size:14px;opacity:.95}
+.langs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:12px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.langs button{border:1px solid #cbd5e1;background:#fff;border-radius:16px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600}
+.langs button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+main{max-width:640px;margin:0 auto;padding:18px}
+.points{display:grid;gap:10px;margin:14px 0 20px}
+.pt{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;font-weight:600;font-size:15px}
+.pt span{font-size:22px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:24px;box-shadow:0 4px 16px rgba(15,23,42,.05)}
+.card h2{color:var(--navy);font-size:19px;margin-bottom:4px}
+.req-note{font-size:12px;color:var(--muted);margin-bottom:14px}
+label{display:block;font-size:14px;font-weight:700;color:var(--navy);margin:14px 0 5px}
+label .rq{color:var(--ng)}
+input[type=text],input[type=tel],input[type=date],input[type=number],select{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:12px;font-size:16px;font-family:inherit;background:#fff}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:18px;padding:8px 14px;cursor:pointer;font-weight:500;color:var(--ink);margin:0;font-size:14px}
+.checks label:has(input:checked){background:#ccfbf1;border-color:var(--teal);color:#0f766e;font-weight:700}
+.checks input{accent-color:var(--teal);width:18px;height:18px}
+.btn{width:100%;background:var(--teal);color:#fff;border:none;border-radius:10px;padding:16px;font-size:18px;font-weight:700;cursor:pointer;margin-top:20px}
+.btn:disabled{opacity:.6}
+.privacy{font-size:12px;color:var(--muted);margin-top:12px;text-align:center}
+#msg{margin-top:14px;font-size:14px;font-weight:700;min-height:20px;text-align:center}
+#done{display:none;text-align:center;padding:40px 16px}
+#done .big{font-size:54px}
+#done h2{color:var(--navy);margin:10px 0}
+footer{text-align:center;font-size:12px;color:var(--muted);padding:20px}
+</style>
+</head>
+<body>
+
+<div class="langs" id="langBar"></div>
+
+<div class="hero">
+  <h1 id="t_title"></h1>
+  <p id="t_sub"></p>
+</div>
+
+<main>
+  <div class="points">
+    <div class="pt"><span>🆓</span><div id="t_p1"></div></div>
+    <div class="pt"><span>💬</span><div id="t_p2"></div></div>
+    <div class="pt"><span>🪪</span><div id="t_p3"></div></div>
+  </div>
+
+  <div class="card" id="formCard">
+    <h2 id="t_form"></h2>
+    <div class="req-note" id="t_req"></div>
+
+    <label><span id="t_name"></span> <span class="rq">*</span></label>
+    <input type="text" id="f_name" autocomplete="name">
+
+    <label><span id="t_nat"></span> <span class="rq">*</span></label>
+    <select id="f_nat"></select>
+
+    <label><span id="t_visa"></span> <span class="rq">*</span></label>
+    <select id="f_visa"></select>
+
+    <label><span id="t_visaExp"></span></label>
+    <input type="date" id="f_visaExp">
+
+    <label><span id="t_jp"></span></label>
+    <select id="f_jp"><option value="">--</option><option>N1</option><option>N2</option><option>N3</option><option>N4</option><option>N5</option></select>
+
+    <label><span id="t_quals"></span></label>
+    <div class="checks" id="f_quals"></div>
+
+    <label><span id="t_exp"></span></label>
+    <input type="number" id="f_exp" min="0" inputmode="numeric">
+
+    <label><span id="t_loc"></span> <span class="rq">*</span></label>
+    <input type="text" id="f_loc">
+
+    <label><span id="t_night"></span></label>
+    <select id="f_night"></select>
+
+    <label><span id="t_phone"></span> <span class="rq">*</span></label>
+    <input type="tel" id="f_phone" autocomplete="tel">
+
+    <label><span id="t_line"></span></label>
+    <input type="text" id="f_line">
+
+    <label><span id="t_src"></span></label>
+    <select id="f_src"></select>
+
+    <button class="btn" id="btnSend" onclick="submitForm()"></button>
+    <div id="msg"></div>
+    <div class="privacy" id="t_priv"></div>
+  </div>
+
+  <div id="done" class="card">
+    <div class="big">✅</div>
+    <h2 id="t_doneTitle"></h2>
+    <p id="t_doneBody"></p>
+  </div>
+</main>
+
+<footer>Kaigo Job Support</footer>
+
+<script>
+const SUPABASE_URL="https://yfqzmmiughpenrvuaymm.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_MHOfAdgTIU8ITDkpSbPFeA_aJchLFOn";
+let sb=null;try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}catch(e){}
+
+// 在留資格・資格は法律用語のため日本語＋ローマ字で全言語共通表示（保存値は日本語）
+const VISAS=[["特定技能1号","Tokutei Ginou 1 / SSW(i)"],["特定技能2号","Tokutei Ginou 2 / SSW(ii)"],["介護","Kaigo (Nursing care)"],["技能実習","Ginou Jisshu / TITP"],["永住者","Eijusha / Permanent"],["定住者","Teijusha / Long-term"],["日本人の配偶者等","Spouse of Japanese"],["永住者の配偶者等","Spouse of Permanent"],["家族滞在","Kazoku Taizai / Dependent"],["留学","Ryugaku / Student"],["技術・人文知識・国際業務","Gijinkoku / Engineer・Humanities"],["特定活動(EPA)","Tokutei Katsudou (EPA)"],["その他","Other"]];
+const QUALS=[["介護福祉士","Kaigo Fukushishi"],["実務者研修","Jitsumusha Kenshu"],["初任者研修","Shoninsha Kenshu"],["介護技能評価試験合格","Kaigo Skill Test"],["介護日本語評価試験合格","Kaigo Japanese Test"],["普通自動車免許","Driver License"],["看護師(母国)","Nurse (home country)"],["その他資格","Other"]];
+const NATS=["ベトナム","フィリピン","インドネシア","ミャンマー","ネパール","中国","韓国","タイ","カンボジア","スリランカ","モンゴル","ブラジル","ペルー","バングラデシュ","インド","その他"];
+
+const I18N={
+ja:{flag:"🇯🇵 やさしい日本語",title:"介護（かいご）の しごとを 無料で 紹介します",sub:"日本で はたらく 外国人の みなさんへ",
+p1:"しごとの 紹介は すべて 無料（0円）です",p2:"LINEで かんたんに そうだん できます",p3:"ビザ（在留資格）の そうだんも できます",
+form:"かんたん登録（3分）",req:"* は かならず 書いてください",
+name:"なまえ（パスポートと おなじ）",nat:"国（くに）",visa:"在留資格（ざいりゅうカードを 見てください）",visaExp:"在留期限（カードの 日付）",
+jp:"日本語レベル（JLPT）",quals:"もっている 資格",exp:"介護の 経験（なん年）",loc:"はたらきたい 場所（例：大阪市）",
+night:"夜勤（よるの しごと）は できますか？",phone:"電話番号",line:"LINE ID",src:"この サイトを どこで 知りましたか？",
+send:"無料で 登録する",doneTitle:"登録 ありがとうございます！",doneBody:"スタッフが LINEか 電話で れんらくします。すこし まってください。",
+priv:"登録した情報は、しごとの紹介のためにだけ 使います。",err:"エラーです。もういちど ためしてください。",need:"* の ところを 書いてください",
+natOpt:["ベトナム","フィリピン","インドネシア","ミャンマー","ネパール","中国","韓国","タイ","カンボジア","スリランカ","モンゴル","ブラジル","ペルー","バングラデシュ","インド","その他"],
+night3:["そうだんしたい","できます","できません"],src6:["Facebook","TikTok","Instagram","YouTube","友だち・家族","その他"]},
+en:{flag:"🇬🇧 English",title:"Free Job Support for Care Work (Kaigo) in Japan",sub:"For foreign residents working in Japan",
+p1:"All job introductions are 100% free",p2:"Easy consultation via LINE",p3:"Visa (residence status) consultation available",
+form:"Quick Registration (3 min)",req:"* is required",
+name:"Full name (same as passport)",nat:"Country",visa:"Residence status (check your zairyu card)",visaExp:"Period of stay (card expiry date)",
+jp:"Japanese level (JLPT)",quals:"Qualifications you have",exp:"Care work experience (years)",loc:"Where do you want to work? (e.g. Osaka)",
+night:"Can you work night shifts?",phone:"Phone number",line:"LINE ID",src:"How did you find this site?",
+send:"Register for Free",doneTitle:"Thank you for registering!",doneBody:"Our staff will contact you via LINE or phone soon.",
+priv:"Your information is used only for job introduction.",err:"Error. Please try again.",need:"Please fill in the * fields",
+natOpt:["Vietnam","Philippines","Indonesia","Myanmar","Nepal","China","Korea","Thailand","Cambodia","Sri Lanka","Mongolia","Brazil","Peru","Bangladesh","India","Other"],
+night3:["Negotiable","Yes","No"],src6:["Facebook","TikTok","Instagram","YouTube","Friend / Family","Other"]},
+vi:{flag:"🇻🇳 Tiếng Việt",title:"Giới thiệu việc làm điều dưỡng (Kaigo) miễn phí tại Nhật",sub:"Dành cho người nước ngoài đang sống tại Nhật Bản",
+p1:"Giới thiệu việc làm hoàn toàn miễn phí",p2:"Tư vấn dễ dàng qua LINE",p3:"Có tư vấn về visa (tư cách lưu trú)",
+form:"Đăng ký nhanh (3 phút)",req:"* là bắt buộc",
+name:"Họ tên (giống hộ chiếu)",nat:"Quốc tịch",visa:"Tư cách lưu trú (xem thẻ zairyu)",visaExp:"Thời hạn lưu trú (ngày trên thẻ)",
+jp:"Trình độ tiếng Nhật (JLPT)",quals:"Chứng chỉ bạn có",exp:"Kinh nghiệm điều dưỡng (năm)",loc:"Nơi bạn muốn làm việc (VD: Osaka)",
+night:"Bạn có làm ca đêm được không?",phone:"Số điện thoại",line:"LINE ID",src:"Bạn biết trang này từ đâu?",
+send:"Đăng ký miễn phí",doneTitle:"Cảm ơn bạn đã đăng ký!",doneBody:"Nhân viên sẽ liên lạc với bạn qua LINE hoặc điện thoại.",
+priv:"Thông tin của bạn chỉ dùng để giới thiệu việc làm.",err:"Có lỗi. Vui lòng thử lại.",need:"Vui lòng điền các mục có dấu *",
+natOpt:["Việt Nam","Philippines","Indonesia","Myanmar","Nepal","Trung Quốc","Hàn Quốc","Thái Lan","Campuchia","Sri Lanka","Mông Cổ","Brazil","Peru","Bangladesh","Ấn Độ","Khác"],
+night3:["Thương lượng","Được","Không được"],src6:["Facebook","TikTok","Instagram","YouTube","Bạn bè / Gia đình","Khác"]},
+id:{flag:"🇮🇩 Bahasa Indonesia",title:"Info Kerja Perawatan (Kaigo) Gratis di Jepang",sub:"Untuk warga asing yang tinggal di Jepang",
+p1:"Semua perkenalan kerja 100% gratis",p2:"Konsultasi mudah lewat LINE",p3:"Bisa konsultasi visa (status tinggal)",
+form:"Pendaftaran Cepat (3 menit)",req:"* wajib diisi",
+name:"Nama lengkap (sesuai paspor)",nat:"Negara asal",visa:"Status tinggal (lihat kartu zairyu)",visaExp:"Masa berlaku (tanggal di kartu)",
+jp:"Level bahasa Jepang (JLPT)",quals:"Sertifikat yang dimiliki",exp:"Pengalaman kaigo (tahun)",loc:"Mau kerja di mana? (contoh: Osaka)",
+night:"Bisa kerja shift malam?",phone:"Nomor HP",line:"LINE ID",src:"Tahu situs ini dari mana?",
+send:"Daftar Gratis",doneTitle:"Terima kasih sudah mendaftar!",doneBody:"Staf kami akan menghubungi Anda lewat LINE atau telepon.",
+priv:"Data Anda hanya dipakai untuk perkenalan kerja.",err:"Terjadi kesalahan. Silakan coba lagi.",need:"Mohon isi bagian bertanda *",
+natOpt:["Vietnam","Filipina","Indonesia","Myanmar","Nepal","Tiongkok","Korea","Thailand","Kamboja","Sri Lanka","Mongolia","Brasil","Peru","Bangladesh","India","Lainnya"],
+night3:["Bisa dibicarakan","Bisa","Tidak bisa"],src6:["Facebook","TikTok","Instagram","YouTube","Teman / Keluarga","Lainnya"]},
+my:{flag:"🇲🇲 မြန်မာ",title:"ဂျပန်တွင် ပြုစုစောင့်ရှောက်ရေး (Kaigo) အလုပ် အခမဲ့ မိတ်ဆက်",sub:"ဂျပန်တွင် နေထိုင်သော နိုင်ငံခြားသားများအတွက်",
+p1:"အလုပ်မိတ်ဆက်ခြင်း အားလုံး အခမဲ့ဖြစ်သည်",p2:"LINE ဖြင့် လွယ်ကူစွာ ဆွေးနွေးနိုင်သည်",p3:"ဗီဇာ (နေထိုင်ခွင့်) အကြောင်းလည်း ဆွေးနွေးနိုင်သည်",
+form:"လျင်မြန်သော စာရင်းသွင်းခြင်း (၃ မိနစ်)",req:"* သည် မဖြစ်မနေ ဖြည့်ရန်",
+name:"အမည် (နိုင်ငံကူးလက်မှတ်အတိုင်း)",nat:"နိုင်ငံ",visa:"နေထိုင်ခွင့် (zairyu ကတ်ကို ကြည့်ပါ)",visaExp:"နေထိုင်ခွင့် သက်တမ်း (ကတ်ပေါ်ရှိ ရက်စွဲ)",
+jp:"ဂျပန်စာ အဆင့် (JLPT)",quals:"ရရှိထားသော အရည်အချင်းလက်မှတ်များ",exp:"Kaigo အတွေ့အကြုံ (နှစ်)",loc:"အလုပ်လုပ်လိုသော နေရာ (ဥပမာ: Osaka)",
+night:"ညဆိုင်း လုပ်နိုင်ပါသလား?",phone:"ဖုန်းနံပါတ်",line:"LINE ID",src:"ဤဆိုက်ကို ဘယ်ကနေ သိခဲ့ပါသလဲ?",
+send:"အခမဲ့ စာရင်းသွင်းမည်",doneTitle:"စာရင်းသွင်းသည့်အတွက် ကျေးဇူးတင်ပါသည်!",doneBody:"ဝန်ထမ်းမှ LINE သို့မဟုတ် ဖုန်းဖြင့် ဆက်သွယ်ပါမည်။",
+priv:"သင့်အချက်အလက်များကို အလုပ်မိတ်ဆက်ရန်အတွက်သာ အသုံးပြုပါမည်။",err:"အမှားဖြစ်သည်။ ထပ်မံကြိုးစားပါ။",need:"* ပါသော အကွက်များကို ဖြည့်ပါ",
+natOpt:["ဗီယက်နမ်","ဖိလစ်ပိုင်","အင်ဒိုနီးရှား","မြန်မာ","နီပေါ","တရုတ်","ကိုရီးယား","ထိုင်း","ကမ္ဘောဒီးယား","သီရိလင်္ကာ","မွန်ဂိုလီးယား","ဘရာဇီး","ပီရူး","ဘင်္ဂလားဒေ့ရှ်","အိန္ဒိယ","အခြား"],
+night3:["ညှိနှိုင်းနိုင်သည်","လုပ်နိုင်သည်","မလုပ်နိုင်ပါ"],src6:["Facebook","TikTok","Instagram","YouTube","သူငယ်ချင်း / မိသားစု","အခြား"]},
+ne:{flag:"🇳🇵 नेपाली",title:"जापानमा केयर वर्क (Kaigo) को नि:शुल्क जॉब सपोर्ट",sub:"जापानमा बस्ने विदेशीहरूका लागि",
+p1:"सबै जॉब परिचय १००% नि:शुल्क छ",p2:"LINE मार्फत सजिलै परामर्श",p3:"भिसा (बसोबास स्थिति) परामर्श पनि उपलब्ध",
+form:"छिटो दर्ता (३ मिनेट)",req:"* अनिवार्य छ",
+name:"पूरा नाम (पासपोर्ट अनुसार)",nat:"देश",visa:"बसोबास स्थिति (zairyu कार्ड हेर्नुहोस्)",visaExp:"बसोबास अवधि (कार्डको मिति)",
+jp:"जापानी भाषा स्तर (JLPT)",quals:"तपाईंसँग भएका योग्यताहरू",exp:"केयर वर्क अनुभव (वर्ष)",loc:"कहाँ काम गर्न चाहनुहुन्छ? (जस्तै: Osaka)",
+night:"रात्रि शिफ्ट गर्न सक्नुहुन्छ?",phone:"फोन नम्बर",line:"LINE ID",src:"यो साइट कहाँबाट थाहा पाउनुभयो?",
+send:"नि:शुल्क दर्ता गर्नुहोस्",doneTitle:"दर्ता गर्नुभएकोमा धन्यवाद!",doneBody:"हाम्रो स्टाफले LINE वा फोनबाट सम्पर्क गर्नेछ।",
+priv:"तपाईंको जानकारी जॉब परिचयका लागि मात्र प्रयोग हुनेछ।",err:"त्रुटि भयो। फेरि प्रयास गर्नुहोस्।",need:"कृपया * भएका ठाउँ भर्नुहोस्",
+natOpt:["भियतनाम","फिलिपिन्स","इन्डोनेसिया","म्यानमार","नेपाल","चीन","कोरिया","थाइल्यान्ड","कम्बोडिया","श्रीलंका","मंगोलिया","ब्राजिल","पेरु","बंगलादेश","भारत","अन्य"],
+night3:["कुरा गर्न सकिन्छ","सक्छु","सक्दिन"],src6:["Facebook","TikTok","Instagram","YouTube","साथी / परिवार","अन्य"]}
+};
+const NIGHT_VALS=["応相談","可","不可"];
+const SRC_VALS=["Facebook","TikTok","Instagram","YouTube","友人・家族","その他"];
+let LANG="ja";
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+function setLang(l){
+  LANG=l;const d=I18N[l];
+  document.querySelectorAll(".langs button").forEach(b=>b.classList.toggle("on",b.dataset.l===l));
+  const ids=["title","sub","p1","p2","p3","form","req","name","nat","visa","visaExp","jp","quals","exp","loc","night","phone","line","src","priv"];
+  ids.forEach(k=>{const el=document.getElementById("t_"+k);if(el)el.textContent=d[k];});
+  document.getElementById("btnSend").textContent=d.send;
+  document.getElementById("t_doneTitle").textContent=d.doneTitle;
+  document.getElementById("t_doneBody").textContent=d.doneBody;
+  // 国
+  const natSel=document.getElementById("f_nat");const curNat=natSel.value;
+  natSel.innerHTML='<option value="">--</option>'+NATS.map((v,i)=>`<option value="${v}">${esc(d.natOpt[i])}</option>`).join("");
+  if(curNat)natSel.value=curNat;
+  // 夜勤
+  const ns=document.getElementById("f_night");const curN=ns.value;
+  ns.innerHTML=NIGHT_VALS.map((v,i)=>`<option value="${v}">${esc(d.night3[i])}</option>`).join("");
+  if(curN)ns.value=curN;
+  // 流入元
+  const ss=document.getElementById("f_src");const curS=ss.value;
+  ss.innerHTML=SRC_VALS.map((v,i)=>`<option value="${v}">${esc(d.src6[i])}</option>`).join("");
+  if(curS)ss.value=curS;
+}
+
+function init(){
+  document.getElementById("langBar").innerHTML=Object.keys(I18N).map(l=>`<button data-l="${l}" onclick="setLang('${l}')">${I18N[l].flag}</button>`).join("");
+  document.getElementById("f_visa").innerHTML='<option value="">--</option>'+VISAS.map(v=>`<option value="${v[0]}">${v[0]}（${v[1]}）</option>`).join("");
+  document.getElementById("f_quals").innerHTML=QUALS.map(q=>`<label><input type="checkbox" value="${q[0]}">${q[0]}（${q[1]}）</label>`).join("");
+  // ブラウザ言語で初期化
+  const bl=(navigator.language||"ja").slice(0,2);
+  setLang(I18N[bl]?bl:"ja");
+}
+
+async function submitForm(){
+  const d=I18N[LANG];
+  const msg=document.getElementById("msg");
+  const v=id=>document.getElementById(id).value.trim();
+  const name=v("f_name"),nat=v("f_nat"),visa=v("f_visa"),loc=v("f_loc"),phone=v("f_phone");
+  msg.style.color="var(--ng)";
+  if(!name||!nat||!visa||!loc||!phone){msg.textContent=d.need;return;}
+  const btn=document.getElementById("btnSend");btn.disabled=true;msg.textContent="...";
+  const line=v("f_line"),src=document.getElementById("f_src").value;
+  const c={
+    id:uid(),name:name,kana:"",nationality:nat,birth:"",gender:"",
+    visa:visa,visaExpiry:v("f_visaExp"),jpLevel:v("f_jp"),
+    quals:[...document.querySelectorAll("#f_quals input:checked")].map(i=>i.value),
+    expYears:v("f_exp"),desiredLoc:loc,desiredSalary:null,night:document.getElementById("f_night").value,
+    phone:phone,email:"",status:"未マッチ",sourceJob:"",
+    memo:`【セルフ登録】流入元: ${src} / LINE: ${line||"-"} / 言語: ${LANG}`,
+    lineId:line,source:src,registeredVia:"entry",lang:LANG,
+    createdAt:new Date().toISOString()
+  };
+  const {error}=await sb.from("gm_cands").insert({id:c.id,data:c});
+  if(error){btn.disabled=false;msg.textContent=d.err;return;}
+  document.getElementById("formCard").style.display="none";
+  document.getElementById("done").style.display="block";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+init();
+</script>
+</body>
+</html>
