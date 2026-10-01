@@ -234,7 +234,7 @@ label{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bot
     <div class="fgrid">
       <div class="fitem"><label>求人名 *</label><input type="text" id="j_title" style="width:100%"></div>
       <div class="fitem"><label>企業・施設名 *</label><input type="text" id="j_company" style="width:100%"></div>
-      <div class="fitem"><label>職種</label><select id="j_type" style="width:100%"><option>介護職員（施設）</option><option>訪問介護</option><option>デイサービス</option><option>看護助手</option><option>その他</option></select></div>
+      <div class="fitem"><label>職種</label><select id="j_type" style="width:100%"><option>介護</option><option>外食業</option><option>宿泊</option><option>飲食料品製造業</option><option>建設</option><option>農業</option><option>工業製品製造業</option><option>ビルクリーニング</option><option>自動車整備</option><option>自動車運送業</option><option>漁業</option><option>造船・舶用工業</option><option>航空</option><option>鉄道</option><option>林業</option><option>木材産業</option><option>その他</option></select></div>
       <div class="fitem"><label>勤務地</label><input type="text" id="j_loc" placeholder="例: 大阪市住吉区" style="width:100%"></div>
       <div class="fitem"><label>月給 下限（万円）</label><input type="number" id="j_salMin" min="0" style="width:100%"></div>
       <div class="fitem"><label>月給 上限（万円）</label><input type="number" id="j_salMax" min="0" style="width:100%"></div>
@@ -377,6 +377,9 @@ function evalMatch(c,j){
   checks.push({k:"在留資格",ok:visaOK,hard:true,d:`本人: ${c.visa||"未設定"} ／ 受入: ${(j.visas&&j.visas.length)?j.visas.join("・"):"制限なし"}`});
   const jpOK=!j.jpLevel||JPLV[c.jpLevel||""]>=JPLV[j.jpLevel];
   checks.push({k:"日本語",ok:jpOK,hard:true,d:`本人: ${c.jpLevel||"未取得"} ／ 要件: ${j.jpLevel||"不問"}以上`});
+  let fldOK=true,fldD="どちらか未設定のため判定対象外";
+  if(j.jobType&&c.fields&&c.fields.length){fldOK=c.fields.some(f=>j.jobType.includes(f)||f.includes(j.jobType));fldD=`希望: ${c.fields.join("・")} ／ 求人: ${j.jobType}`;}
+  checks.push({k:"分野",ok:fldOK,hard:false,d:fldD});
   const req=j.reqQuals||[];
   const missing=req.filter(q=>!(c.quals||[]).includes(q));
   checks.push({k:"資格",ok:missing.length===0,hard:false,d:missing.length?`不足: ${missing.join("・")}`:(req.length?`要件充足（${req.join("・")}）`:"資格不問")});
@@ -499,7 +502,8 @@ function setV(id,v){document.getElementById(id).value=v??"";}
 function gV(id){return document.getElementById(id).value.trim();}
 async function saveCand(){
   if(!gV("f_name")){toast("氏名は必須です");return;}
-  const c={
+  const prev=editCandId?(DB.cands.find(x=>x.id===editCandId)||{}):{};
+  const c={...prev,
     id:editCandId||uid(),name:gV("f_name"),kana:gV("f_kana"),nationality:gV("f_nationality"),birth:gV("f_birth"),
     gender:gV("f_gender"),visa:gV("f_visa"),visaExpiry:gV("f_visaExpiry"),jpLevel:gV("f_jp"),
     quals:[...document.querySelectorAll("#f_quals input:checked")].map(i=>i.value),
@@ -546,7 +550,7 @@ function openJobModal(id){
   document.getElementById("jobModalTitle").textContent=id?"求人を編集":"求人を登録";
   document.getElementById("jobPdfStatus").textContent="";
   const j=id?DB.jobs.find(x=>x.id===id):{};
-  setV("j_title",j.title);setV("j_company",j.company);setV("j_type",j.jobType||"介護職員（施設）");setV("j_loc",j.location);
+  setV("j_title",j.title);setV("j_company",j.company);setV("j_type",j.jobType||"介護");setV("j_loc",j.location);
   setV("j_salMin",j.salaryMin);setV("j_salMax",j.salaryMax);setV("j_jp",j.jpLevel);setV("j_night",j.night||"なし");
   setV("j_head",j.headcount||1);setV("j_status",j.status||"募集中");setV("j_memo",j.memo);
   document.querySelectorAll("#j_quals input").forEach(i=>i.checked=(j.reqQuals||[]).includes(i.value));
